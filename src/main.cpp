@@ -107,10 +107,10 @@ vector<int> nosRestantes(Solution *s, vector<int> *V){
 }
 void inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, vector<int>& CL){
     s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
-    CL.erase(CL.begin() + selecionado);
+    
 }
 
-Solution Construcao(Solution &s, Data data)
+Solution Construcao(Solution &s, Data& data)
 {
     size_t dimension = data.getDimension();
 
@@ -140,12 +140,12 @@ Solution Construcao(Solution &s, Data data)
 
         inserirNaSolucao(s, selecionado, custoInsercao, CL); // o original só usava &s e custoIsercao
 
-        // auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido); // o original só usava (s, custoInsercao[selecionado].noInserido)
-        //     if (it != CL.end()) {
-        //         CL.erase(it);
-        //     }
+        auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido); // o original só usava (s, custoInsercao[selecionado].noInserido)
+            if (it != CL.end()) {
+                CL.erase(it);
+            }
         //CL.erase(CL.begin() + selecionado); 
-        //custoInsercao.erase(custoInsercao.begin() + selecionado);
+        custoInsercao.erase(custoInsercao.begin() + selecionado);
     }
 
     return s;
@@ -183,7 +183,7 @@ int main(int argc, char** argv) // a main é só debug
 
     exibirSolucao(&s);
 
-    cout << "\n" << calcularCusto(data, s.sequencia);
+    cout << calcularCusto(data, s.sequencia);
 
     return 0;
 }
