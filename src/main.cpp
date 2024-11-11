@@ -105,9 +105,21 @@ vector<int> nosRestantes(Solution *s, vector<int> *V){
     V->erase(V->begin());
     return *V;
 }
-void inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, vector<int>& CL){
-    s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
-    
+
+bool inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, Data& data){ //teste para a inserção mais barata
+    int a = custoInsercao[selecionado].arestaRemovida; // aresta retirada que contem {i,j}
+
+    auto it = find(s.sequencia.begin(), s.sequencia.end(), a);
+
+    int ai = distance(s.sequencia.begin(), it);
+    int aj = distance(s.sequencia.begin(), it);    
+
+    if(custoInsercao[selecionado].custo > data.getDistance(ai, aj)){        
+        s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
+        return true;
+    }else{
+        return false;
+    }  
 }
 
 Solution Construcao(Solution &s, Data& data)
@@ -129,7 +141,7 @@ Solution Construcao(Solution &s, Data& data)
         vector<InsertionInfo> custoInsercao = calcularCustoInsercao(s, CL, data);
 
         sort(custoInsercao.begin(),custoInsercao.end(), [](const InsertionInfo& x, const InsertionInfo& y){
-            return x.custo < y.custo;
+            return x.custo > y.custo;
         }); // não entendi muito bem a comparação lambda em termos genéricos, mas eu sei o que ela faz aqui
 
         double alpha = (double) rand() / RAND_MAX;
@@ -138,17 +150,96 @@ Solution Construcao(Solution &s, Data& data)
 
         // int selecionado = rand() % ((int) ceil(alpha * custoInsercao.size())); testes (não deu certo)
 
-        inserirNaSolucao(s, selecionado, custoInsercao, CL); // o original só usava &s e custoIsercao
-
-        auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido); // o original só usava (s, custoInsercao[selecionado].noInserido)
-            if (it != CL.end()) {
-                CL.erase(it);
-            }
-        //CL.erase(CL.begin() + selecionado); 
-        custoInsercao.erase(custoInsercao.begin() + selecionado);
+        if(inserirNaSolucao(s, selecionado, custoInsercao, data)){ // o original só usava &s e custoIsercao e n tinha if
+            auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido); // o original só usava (s, custoInsercao[selecionado].noInserido)
+                if (it != CL.end()) {
+                    CL.erase(it);
+                }
+            custoInsercao.erase(custoInsercao.begin() + selecionado);
+        }
     }
 
     return s;
+}
+
+bool bestImprovementSwap(Solution& s, Data& data){
+    double bestDelta = 0;
+    int best_i, best_j;
+    for(int i = 1; i < s.sequencia.size() - 1; i++)
+    {
+        int vi = s.sequencia[i];
+        int vi_next = s.sequencia[i + 1];
+        int vi_prev = s.sequencia[i - 1];
+
+        for(int j = i + 1; j < s.sequencia.size() - 1; j++)
+        {
+            int vj = s.sequencia[j];
+            int vj_next = s.sequencia[j + 1];
+            int vj_prev = s.sequencia[j - 1];
+            double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
+                           + data.getDistance(vi_prev, vj) + data.getDistance(vj, vi_next) 
+                           - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
+                           + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
+
+            if (delta < bestDelta)
+            {
+                bestDelta = delta;
+                best_i = i;
+                best_j = j;
+            }
+        }
+    }
+
+    if(bestDelta < 0)
+    {
+        swap(s.sequencia[best_i], s.sequencia[best_j]);
+        s.valorObj = s.valorObj + bestDelta; // tenho ctz q n é assim q faz
+        return true;
+    }
+    return false;
+
+}
+
+bool bestImprovement2Opt(Solution& s, Data& data){
+    return false;
+}
+
+bool bestImprovementOrOpt(Solution& s, int id, Data& data){
+    return false;
+}
+
+void BuscaLocal(Solution& s, Data& data)
+{
+    vector<int> NL = {1, 2, 3, 4, 5};
+    bool improved = false;
+
+    while (NL.empty() == false){
+
+        int n = 1 + rand() % (NL.size());
+        switch (NL[n]){
+            case 1:
+                improved = bestImprovementSwap(s, data);
+            break;
+            case 2:
+                improved = bestImprovement2Opt(s, data);
+            break;
+            case 3:
+                improved = bestImprovementOrOpt(s, 1, data); // Reinsertion
+            break;
+            case 4:
+                improved = bestImprovementOrOpt(s, 2, data); // Or-opt2
+            break;
+            case 5:
+                improved = bestImprovementOrOpt(s, 3, data); // Or-opt3
+            break;
+            }
+
+        if (improved == true){
+        NL = {1, 2, 3, 4, 5};
+        }else{
+        NL.erase(NL.begin() + (n-1));
+        }
+    }
 }
 
 // estou compilando com ./tsp instances/teste.tsp
@@ -161,29 +252,65 @@ int main(int argc, char** argv) // a main é só debug
 
     Solution s = {{1,1}, 0}; // solução
 
+    assert(0);
+
     // seed para os aleatórios
     srand((unsigned) time(NULL));
 
     s = Construcao(s,data);
 
-    // size_t dimension = data.getDimension();
+            // size_t dimension = data.getDimension();
 
-    // vector<int> V = vector<int>(dimension);
-    // for(int i = 0; i < dimension; i++){
-    //     V[i] = i+1;
+            // vector<int> V = vector<int>(dimension);
+            // for(int i = 0; i < dimension; i++){
+            //     V[i] = i+1;
+            // }
+
+            // s.sequencia = escolher3NosAleatorios(&s, dimension);
+            // vector<int> CL = nosRestantes(&s, &V);
+
+            // vector<InsertionInfo> custoInsercao = calcularCustoInsercao(s, CL, data);
+
+            //     sort(custoInsercao.begin(),custoInsercao.end(), [](const InsertionInfo& x, const InsertionInfo& y){
+            //         return x.custo < y.custo;
+            //     }); // não entendi muito bem a comparação lambda em termos genéricos, mas eu sei o que ela faz aqui
+
+            //     double alpha = (double) rand() / RAND_MAX;
+
+            //     int selecionado = rand() % ((int) ceil(alpha * CL.size()));
+
+            // cout << "CL: ";
+
+            // for(int i = 0; i < CL.size() - 1; i++){
+            //     cout << CL[i] << " -> ";
+            // }
+            // cout << CL.back() << endl;
+
+            // cout << "CustoInserção: ";
+
+            // for(int i = 0; i < custoInsercao.size(); i++){
+            //     cout << custoInsercao[i].custo << " (inserido: " << custoInsercao[i].noInserido <<  ") " 
+            //     << "(removida: " << custoInsercao[i].arestaRemovida
+            //     << ") " << endl;
+            // }
+
+    // s = {{1,2,3,4,5,6,1},0};
+
+    // exibirSolucao(&s); 
+
+    // cout << calcularCusto(data, s.sequencia) << endl;
+
+    // bool improved = bestImprovementSwap(s,data);
+
+    exibirSolucao(&s); 
+
+    cout << calcularCusto(data, s.sequencia) << endl;
+
+    // if (improved == true){
+    //     cout << "melhorou" << endl;
+    // } else{
+    //     cout << "piorou" << endl;
     // }
-
-    // s.sequencia = escolher3NosAleatorios(&s, dimension);
-    // vector<int> CL = nosRestantes(&s, &V);
-
-    // for(int i = 0; i < CL.size() - 1; i++){
-    //     cout << CL[i] << " -> ";
-    // }
-    // cout << CL.back() << endl;
-
-    exibirSolucao(&s);
-
-    cout << calcularCusto(data, s.sequencia);
 
     return 0;
 }
