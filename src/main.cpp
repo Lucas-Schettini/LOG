@@ -19,6 +19,8 @@ typedef struct{
     double custo; // delta ao inserir k na aresta {i,j}
 } InsertionInfo;
 
+//construção
+
 void exibirSolucao(Solution *s)
 {
     for(int i = 0; i < s->sequencia.size() - 1; i++){
@@ -106,20 +108,20 @@ vector<int> nosRestantes(Solution *s, vector<int> *V){
     return *V;
 }
 
-bool inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, Data& data){ //teste para a inserção mais barata
-    int a = custoInsercao[selecionado].arestaRemovida; // aresta retirada que contem {i,j}
+bool inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, Data& data){
+    // int a = custoInsercao[selecionado].arestaRemovida; // aresta retirada que contem {i,j}
 
-    auto it = find(s.sequencia.begin(), s.sequencia.end(), a);
+    // auto it = find(s.sequencia.begin(), s.sequencia.end(), a);
 
-    int ai = distance(s.sequencia.begin(), it);
-    int aj = distance(s.sequencia.begin(), it);    
+    // int ai = distance(s.sequencia.begin(), it);
+    // int aj = distance(s.sequencia.begin(), it);    
 
-    if(custoInsercao[selecionado].custo > data.getDistance(ai, aj)){        
+    // if(custoInsercao[selecionado].custo > data.getDistance(ai, aj)){        
         s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
         return true;
-    }else{
-        return false;
-    }  
+    // }else{
+    //     return false;
+    // }  
 }
 
 Solution Construcao(Solution &s, Data& data)
@@ -146,9 +148,9 @@ Solution Construcao(Solution &s, Data& data)
 
         double alpha = (double) rand() / RAND_MAX;
 
-        int selecionado = rand() % ((int) ceil(alpha * CL.size()));
+        //int selecionado = rand() % ((int) ceil(alpha * CL.size()));
 
-        // int selecionado = rand() % ((int) ceil(alpha * custoInsercao.size())); testes (não deu certo)
+        int selecionado = rand() % ((int) ceil(alpha * s.sequencia.size()));
 
         if(inserirNaSolucao(s, selecionado, custoInsercao, data)){ // o original só usava &s e custoIsercao e n tinha if
             auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido); // o original só usava (s, custoInsercao[selecionado].noInserido)
@@ -162,9 +164,12 @@ Solution Construcao(Solution &s, Data& data)
     return s;
 }
 
+//improvement:
+
 bool bestImprovementSwap(Solution& s, Data& data){
     double bestDelta = 0;
     int best_i, best_j;
+
     for(int i = 1; i < s.sequencia.size() - 1; i++)
     {
         int vi = s.sequencia[i];
@@ -179,7 +184,15 @@ bool bestImprovementSwap(Solution& s, Data& data){
             double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
                            + data.getDistance(vi_prev, vj) + data.getDistance(vj, vi_next) 
                            - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
-                           + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
+                           + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next)
+                           + (2*data.getDistance(vi,vj)); // OBS:não sei se é genérico
+            //original:
+            // double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
+            //                + data.getDistance(vi_prev, vj) + data.getDistance(vj, vi_next) 
+            //                - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
+            //                + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
+
+            // cout << delta << endl; debug
 
             if (delta < bestDelta)
             {
@@ -189,11 +202,13 @@ bool bestImprovementSwap(Solution& s, Data& data){
             }
         }
     }
+    // cout <<"\n";
+    // cout << bestDelta << endl; debug
 
     if(bestDelta < 0)
     {
         swap(s.sequencia[best_i], s.sequencia[best_j]);
-        s.valorObj = s.valorObj + bestDelta; // tenho ctz q n é assim q faz
+        s.valorObj = s.valorObj + bestDelta;
         return true;
     }
     return false;
@@ -201,10 +216,71 @@ bool bestImprovementSwap(Solution& s, Data& data){
 }
 
 bool bestImprovement2Opt(Solution& s, Data& data){
+    double bestDelta = 0;
+    int best_i, best_j;
+
+    for(int i = 1; i < s.sequencia.size() - 1; i++){
+
+        int vi = s.sequencia[i];
+        int vi_next = s.sequencia[i + 1];
+
+        for(int j = i + 1; j < s.sequencia.size() - 1; j++){
+            
+            if(i == j + 1 || i == j - 1 ){ //garantia que os nós são adjacentes
+               continue; 
+            }
+
+            int vj = s.sequencia[j];
+            int vj_next = s.sequencia[j + 1];
+
+            double delta = - data.getDistance(vi, vi_next) - data.getDistance(vj, vj_next)
+                           + data.getDistance(vi_next, vj_next) + data.getDistance(vi, vj);
+
+            // cout << delta << endl; debug
+
+            if (delta < bestDelta){
+                bestDelta = delta;
+                best_i = i;
+                best_j = j;
+            }
+        }
+    }
+    // cout <<"\n";
+    // cout << bestDelta << endl; debug
+
+    if(bestDelta < 0){
+        swap(s.sequencia[best_i + 1], s.sequencia[best_j]);
+        reverse(s.sequencia.begin() + best_i + 1, s.sequencia.begin() + best_j - 1);
+        s.valorObj = s.valorObj + bestDelta;
+        return true;
+    }
     return false;
 }
 
 bool bestImprovementOrOpt(Solution& s, int id, Data& data){
+    double bestDelta = 0;
+    int best_i, best_j;
+
+    if(id==1){ //divide em Reinsertion e Or-opt
+        for (int i = 1; i < s.sequencia.size() - 1; i++){
+            int vi = s.sequencia[i];
+            int vi_next = s.sequencia[i+1];
+            int vi_prev = s.sequencia[i - 1];
+
+            for(int j = i + 1; j < s.sequencia.size() - 1; j++){
+                int vj = s.sequencia[j];
+                int vj_next = s.sequencia[j+1];
+                int vj_prev = s.sequencia[j-1];
+
+                double delta = 1;
+            }
+        }
+
+        return false;
+    } else {
+
+    }
+
     return false;
 }
 
@@ -252,12 +328,12 @@ int main(int argc, char** argv) // a main é só debug
 
     Solution s = {{1,1}, 0}; // solução
 
-    assert(0);
-
     // seed para os aleatórios
     srand((unsigned) time(NULL));
 
-    s = Construcao(s,data);
+    //s = Construcao(s,data); 
+
+    //testes para a construção:
 
             // size_t dimension = data.getDimension();
 
@@ -294,23 +370,27 @@ int main(int argc, char** argv) // a main é só debug
             //     << ") " << endl;
             // }
 
-    // s = {{1,2,3,4,5,6,1},0};
+    // testes para o improvement:
 
-    // exibirSolucao(&s); 
+    s = {{1,2,3,4,5,6,1},0};
 
-    // cout << calcularCusto(data, s.sequencia) << endl;
+    exibirSolucao(&s);
 
-    // bool improved = bestImprovementSwap(s,data);
+    s.valorObj = calcularCusto(data, s.sequencia);
+
+    cout << s.valorObj << endl;
+
+    bool improved = bestImprovement2Opt(s,data);
 
     exibirSolucao(&s); 
 
-    cout << calcularCusto(data, s.sequencia) << endl;
+    cout << s.valorObj << endl;
 
-    // if (improved == true){
-    //     cout << "melhorou" << endl;
-    // } else{
-    //     cout << "piorou" << endl;
-    // }
+    if (improved){
+        cout << "melhorou" << endl;
+    } else{
+        cout << "piorou" << endl;
+    }
 
     return 0;
 }
