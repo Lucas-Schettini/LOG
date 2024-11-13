@@ -108,20 +108,8 @@ vector<int> nosRestantes(Solution *s, vector<int> *V){
     return *V;
 }
 
-bool inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, Data& data){
-    // int a = custoInsercao[selecionado].arestaRemovida; // aresta retirada que contem {i,j}
-
-    // auto it = find(s.sequencia.begin(), s.sequencia.end(), a);
-
-    // int ai = distance(s.sequencia.begin(), it);
-    // int aj = distance(s.sequencia.begin(), it);    
-
-    // if(custoInsercao[selecionado].custo > data.getDistance(ai, aj)){        
-        s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
-        return true;
-    // }else{
-    //     return false;
-    // }  
+void inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, vector<int>& CL){
+    s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
 }
 
 Solution Construcao(Solution &s, Data& data)
@@ -139,26 +127,25 @@ Solution Construcao(Solution &s, Data& data)
     cout << "\n";
 
     while(!CL.empty()) {
-
+        
         vector<InsertionInfo> custoInsercao = calcularCustoInsercao(s, CL, data);
 
         sort(custoInsercao.begin(),custoInsercao.end(), [](const InsertionInfo& x, const InsertionInfo& y){
-            return x.custo > y.custo;
+            return x.custo < y.custo;
         }); // não entendi muito bem a comparação lambda em termos genéricos, mas eu sei o que ela faz aqui
 
         double alpha = (double) rand() / RAND_MAX;
 
-        //int selecionado = rand() % ((int) ceil(alpha * CL.size()));
+        int selecionado = rand() % ((int) ceil(alpha * custoInsercao.size()));
 
-        int selecionado = rand() % ((int) ceil(alpha * s.sequencia.size()));
+        s.sequencia.insert(s.sequencia.begin() + custoInsercao[selecionado].arestaRemovida + 1, custoInsercao[selecionado].noInserido); // o original só usava &s e custoIsercao e n tinha if
 
-        if(inserirNaSolucao(s, selecionado, custoInsercao, data)){ // o original só usava &s e custoIsercao e n tinha if
-            auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido); // o original só usava (s, custoInsercao[selecionado].noInserido)
-                if (it != CL.end()) {
-                    CL.erase(it);
-                }
-            custoInsercao.erase(custoInsercao.begin() + selecionado);
+        auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido);
+        if (it != CL.end()) {
+            CL.erase(it);
         }
+        //custoInsercao.erase(custoInsercao.begin() + selecionado);
+        
     }
 
     return s;
@@ -254,6 +241,7 @@ bool bestImprovement2Opt(Solution& s, Data& data){
         s.valorObj = s.valorObj + bestDelta;
         return true;
     }
+
     return false;
 }
 
@@ -272,16 +260,30 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
                 int vj_next = s.sequencia[j+1];
                 int vj_prev = s.sequencia[j-1];
 
-                double delta = 1;
+                double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
+                               + data.getDistance(vi_prev, vi_next) + data.getDistance(vj, vi)
+                               - data.getDistance(vj, vj_next) + data.getDistance(vi, vj_next);
+
+                if (delta < bestDelta){
+                bestDelta = delta;
+                best_i = i;
+                best_j = j;
+                }
             }
         }
 
+        if(bestDelta < 0){
+            
+
+            s.valorObj = s.valorObj + bestDelta;
+            return true;
+        }
+
         return false;
+
     } else {
-
+        return false;
     }
-
-    return false;
 }
 
 void BuscaLocal(Solution& s, Data& data)
@@ -331,7 +333,7 @@ int main(int argc, char** argv) // a main é só debug
     // seed para os aleatórios
     srand((unsigned) time(NULL));
 
-    //s = Construcao(s,data); 
+    s = Construcao(s,data); 
 
     //testes para a construção:
 
@@ -372,7 +374,7 @@ int main(int argc, char** argv) // a main é só debug
 
     // testes para o improvement:
 
-    s = {{1,2,3,4,5,6,1},0};
+    // s = {{1,2,3,4,5,6,1},0};
 
     exibirSolucao(&s);
 
