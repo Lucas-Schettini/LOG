@@ -8,6 +8,8 @@
 
 using namespace std;
 
+//structs
+
 typedef struct{
     vector <int> sequencia; // sequencia da solução
     double valorObj; // valor que atende às expectativas
@@ -108,9 +110,9 @@ vector<int> nosRestantes(Solution *s, vector<int> *V){
     return *V;
 }
 
-void inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, vector<int>& CL){
-    s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
-}
+// void inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, vector<int>& CL){
+//     s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
+// }
 
 Solution Construcao(Solution &s, Data& data)
 {
@@ -127,7 +129,7 @@ Solution Construcao(Solution &s, Data& data)
     cout << "\n";
 
     while(!CL.empty()) {
-        
+
         vector<InsertionInfo> custoInsercao = calcularCustoInsercao(s, CL, data);
 
         sort(custoInsercao.begin(),custoInsercao.end(), [](const InsertionInfo& x, const InsertionInfo& y){
@@ -179,7 +181,7 @@ bool bestImprovementSwap(Solution& s, Data& data){
             //                - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
             //                + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
 
-            // cout << delta << endl; debug
+            //cout << delta << endl;
 
             if (delta < bestDelta)
             {
@@ -209,7 +211,7 @@ bool bestImprovement2Opt(Solution& s, Data& data){
     for(int i = 1; i < s.sequencia.size() - 1; i++){
 
         int vi = s.sequencia[i];
-        int vi_next = s.sequencia[i + 1];
+        int vi_next = s.sequencia[i+1];
 
         for(int j = i + 1; j < s.sequencia.size() - 1; j++){
             
@@ -236,8 +238,10 @@ bool bestImprovement2Opt(Solution& s, Data& data){
     // cout << bestDelta << endl; debug
 
     if(bestDelta < 0){
+
         swap(s.sequencia[best_i + 1], s.sequencia[best_j]);
         reverse(s.sequencia.begin() + best_i + 1, s.sequencia.begin() + best_j - 1);
+
         s.valorObj = s.valorObj + bestDelta;
         return true;
     }
@@ -253,12 +257,11 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
         for (int i = 1; i < s.sequencia.size() - 1; i++){
             int vi = s.sequencia[i];
             int vi_next = s.sequencia[i+1];
-            int vi_prev = s.sequencia[i - 1];
+            int vi_prev = s.sequencia[i-1];
 
             for(int j = i + 1; j < s.sequencia.size() - 1; j++){
                 int vj = s.sequencia[j];
                 int vj_next = s.sequencia[j+1];
-                int vj_prev = s.sequencia[j-1];
 
                 double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
                                + data.getDistance(vi_prev, vi_next) + data.getDistance(vj, vi)
@@ -273,15 +276,65 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
         }
 
         if(bestDelta < 0){
-            
+            //cout << best_i << " " << best_j << endl;
+
+            s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
+            s.sequencia.erase(s.sequencia.begin() + best_i);
 
             s.valorObj = s.valorObj + bestDelta;
             return true;
         }
 
         return false;
+    //Or-Opt
+    } else { 
+        for (int i = 1; i < s.sequencia.size() - 1 - id; i++){
 
-    } else {
+            int vi_prev = s.sequencia[i - 1];
+            int vi_start = s.sequencia[i];
+            int vi_end = s.sequencia[i + id - 1];
+            int vi_next = s.sequencia[i + id];
+
+            for(int j = 1; j < s.sequencia.size() - 1; j++){
+                int vj = s.sequencia[j];
+                int vj_next = s.sequencia[j+1];
+
+                if (j >= i && j <= i + id - 1){
+                    continue;
+                }
+
+                double delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_end, vi_next)
+                               - data.getDistance(vj, vj_next) 
+                               + data.getDistance(vj, vi_start)
+                               + data.getDistance(vi_prev, vi_next) + data.getDistance(vi_end, vj_next);
+
+                if (delta < bestDelta){
+                bestDelta = delta;
+                best_i = i;
+                best_j = j;
+                }
+            }
+        }
+
+        if(bestDelta < 0){
+            //cout << best_i << " " << best_j << endl;
+
+            auto start_it = s.sequencia.begin() + best_i;
+            auto end_it = start_it + id;
+            vector <int> bloco (s.sequencia.begin() + best_i, s.sequencia.begin() + best_i + id);
+
+            s.sequencia.erase(start_it, end_it);
+
+            if(best_i > best_j){
+                s.sequencia.insert(s.sequencia.begin() + best_j + 1, bloco.begin(), bloco.end());
+            } else{
+                s.sequencia.insert(s.sequencia.begin() + best_j + 1 - id, bloco.begin(), bloco.end());
+            }
+
+            s.valorObj = s.valorObj + bestDelta;
+            return true;
+        }
+
         return false;
     }
 }
@@ -293,29 +346,34 @@ void BuscaLocal(Solution& s, Data& data)
 
     while (NL.empty() == false){
 
-        int n = 1 + rand() % (NL.size());
+        int n = rand() % (NL.size());
         switch (NL[n]){
             case 1:
                 improved = bestImprovementSwap(s, data);
+                cout << "swap" << endl;
             break;
             case 2:
                 improved = bestImprovement2Opt(s, data);
+                cout << "2opt" << endl;
             break;
             case 3:
                 improved = bestImprovementOrOpt(s, 1, data); // Reinsertion
+                cout << "reinsertion" << endl;
             break;
             case 4:
                 improved = bestImprovementOrOpt(s, 2, data); // Or-opt2
+                cout << "or-opt2" << endl;
             break;
             case 5:
                 improved = bestImprovementOrOpt(s, 3, data); // Or-opt3
+                cout << "or-opt3" << endl;
             break;
             }
 
         if (improved == true){
-        NL = {1, 2, 3, 4, 5};
+            NL = {1, 2, 3, 4, 5};
         }else{
-        NL.erase(NL.begin() + (n-1));
+            NL.erase(NL.begin() + n);
         }
     }
 }
@@ -335,46 +393,9 @@ int main(int argc, char** argv) // a main é só debug
 
     s = Construcao(s,data); 
 
-    //testes para a construção:
-
-            // size_t dimension = data.getDimension();
-
-            // vector<int> V = vector<int>(dimension);
-            // for(int i = 0; i < dimension; i++){
-            //     V[i] = i+1;
-            // }
-
-            // s.sequencia = escolher3NosAleatorios(&s, dimension);
-            // vector<int> CL = nosRestantes(&s, &V);
-
-            // vector<InsertionInfo> custoInsercao = calcularCustoInsercao(s, CL, data);
-
-            //     sort(custoInsercao.begin(),custoInsercao.end(), [](const InsertionInfo& x, const InsertionInfo& y){
-            //         return x.custo < y.custo;
-            //     }); // não entendi muito bem a comparação lambda em termos genéricos, mas eu sei o que ela faz aqui
-
-            //     double alpha = (double) rand() / RAND_MAX;
-
-            //     int selecionado = rand() % ((int) ceil(alpha * CL.size()));
-
-            // cout << "CL: ";
-
-            // for(int i = 0; i < CL.size() - 1; i++){
-            //     cout << CL[i] << " -> ";
-            // }
-            // cout << CL.back() << endl;
-
-            // cout << "CustoInserção: ";
-
-            // for(int i = 0; i < custoInsercao.size(); i++){
-            //     cout << custoInsercao[i].custo << " (inserido: " << custoInsercao[i].noInserido <<  ") " 
-            //     << "(removida: " << custoInsercao[i].arestaRemovida
-            //     << ") " << endl;
-            // }
-
     // testes para o improvement:
 
-    // s = {{1,2,3,4,5,6,1},0};
+    //s = {{1,2,3,4,5,6,1},0};
 
     exibirSolucao(&s);
 
@@ -382,17 +403,27 @@ int main(int argc, char** argv) // a main é só debug
 
     cout << s.valorObj << endl;
 
-    bool improved = bestImprovement2Opt(s,data);
+        //bool improved = bestImprovementOrOpt(s,1,data);
+        //bool improved = bestImprovement2Opt(s,data);
+        //bool improved = bestImprovementSwap(s,data);
 
-    exibirSolucao(&s); 
+        // exibirSolucao(&s); 
+
+        // cout << "Teste: " << s.valorObj << endl;
+
+        // cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
+
+        // if (improved){
+        //     cout << "melhorou" << endl;
+        // } else{
+        //     cout << "piorou" << endl;
+        // }
+
+    BuscaLocal(s,data);
+
+    exibirSolucao(&s);
 
     cout << s.valorObj << endl;
-
-    if (improved){
-        cout << "melhorou" << endl;
-    } else{
-        cout << "piorou" << endl;
-    }
 
     return 0;
 }
