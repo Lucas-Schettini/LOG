@@ -144,10 +144,8 @@ Solution Construcao(Solution &s, Data& data)
         auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido);
         if (it != CL.end()) {
             CL.erase(it);
-        }
-        
+        }   
     }
-
     return s;
 }
 
@@ -248,74 +246,59 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
     int best_i, best_j;
     double delta = 0;
 
-    if(id==1){ //divide em Reinsertion e Or-opt
-        for (int i = 1; i < s.sequencia.size() - 1; i++){
-            int vi = s.sequencia[i];
-            int vi_next = s.sequencia[i+1];
-            int vi_prev = s.sequencia[i-1];
+    // if(id == 1){
+    //     id = 0;
+    // }
 
-            for(int j = i + 1; j < s.sequencia.size() - 1; j++){
-                int vj = s.sequencia[j];
-                int vj_next = s.sequencia[j+1];
+    for (int i = 1; i < s.sequencia.size() - 1 - id; i++){
 
-                double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
-                               + data.getDistance(vi_prev, vi_next) + data.getDistance(vj, vi)
-                               - data.getDistance(vj, vj_next) + data.getDistance(vi, vj_next);
+        int vi_prev = s.sequencia[i - 1];
+        int vi_start = s.sequencia[i];
+        int vi_end = s.sequencia[i + id - 1];
+        int vi_next = s.sequencia[i + id];
 
-                if (delta < bestDelta){
-                bestDelta = delta;
-                best_i = i;
-                best_j = j;
-                }
+        for(int j = 1; j < s.sequencia.size() - 1; j++){
+            int vj = s.sequencia[j];
+            int vj_next = s.sequencia[j+1];
+
+            if (j >= i && j <= i + id - 1){
+                continue;
             }
-        }
 
-        if(bestDelta < 0){
+            if(j == i-1 || j == i){
+                continue;
+            }
 
-            s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
-            s.sequencia.erase(s.sequencia.begin() + best_i);
-
-            s.valorObj = s.valorObj + bestDelta;
-            return true;
-        }
-
-        return false;
-    //Or-Opt
-    } else { 
-        for (int i = 1; i < s.sequencia.size() - 1 - id; i++){
-
-            int vi_prev = s.sequencia[i - 1];
-            int vi_start = s.sequencia[i];
-            int vi_end = s.sequencia[i + id - 1];
-            int vi_next = s.sequencia[i + id];
-
-            for(int j = 1; j < s.sequencia.size() - 1; j++){
-                int vj = s.sequencia[j];
-                int vj_next = s.sequencia[j+1];
-
-                if (j >= i && j <= i + id - 1){
-                    continue;
-                }
-
-                if(j == i-1){
-                    continue;
-                }
-                
+            if(id == 1){
+                delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_start, vi_next)
+                        + data.getDistance(vi_prev, vi_next) + data.getDistance(vj, vi_start)
+                        - data.getDistance(vj, vj_next) + data.getDistance(vi_start, vj_next);
+            } else{
                 delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_end, vi_next)
                         - data.getDistance(vj, vj_next) 
                         + data.getDistance(vj, vi_start)
                         + data.getDistance(vi_prev, vi_next) + data.getDistance(vi_end, vj_next);
+            }
 
-                if (delta < bestDelta){
-                    bestDelta = delta;
-                    best_i = i;
-                    best_j = j;
-                }
+            if (delta < bestDelta){
+                bestDelta = delta;
+                best_i = i;
+                best_j = j;
             }
         }
+    }
 
-        if(bestDelta < 0){
+    if(bestDelta < 0){
+        if(id == 1){
+            s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
+            if(best_i > best_j){
+                s.sequencia.erase(s.sequencia.begin() + best_i + 1);
+            } else{
+                s.sequencia.erase(s.sequencia.begin() + best_i);                
+            }
 
+
+        } else{
             auto start_it = s.sequencia.begin() + best_i;
             auto end_it = start_it + id;
             vector <int> bloco (s.sequencia.begin() + best_i, s.sequencia.begin() + best_i + id);
@@ -329,12 +312,13 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
                 s.sequencia.insert(s.sequencia.begin() + best_j + 1 - id, bloco.begin(), bloco.end());
             }
 
-            s.valorObj = s.valorObj + bestDelta;
-            return true;
         }
 
-        return false;
+        s.valorObj = s.valorObj + bestDelta;
+        return true;
     }
+
+        return false;
 }
 
 void BuscaLocal(Solution& s, Data& data)
@@ -487,6 +471,7 @@ int main(int argc, char** argv)
     for(int i = 0; i < maxIter; i++){
         Solution s = {{1,1}, 0};
         s = Construcao(s,data);
+        s.valorObj = calcularCusto(data, s.sequencia);
         Solution best = s;
 
         int IterILS = 0;
@@ -507,8 +492,9 @@ int main(int argc, char** argv)
             bestOfAll = best;
         }
     }
+
     //exibirSolucao(bestOfAll);
-    cout << calcularCusto(data, bestOfAll.sequencia) << endl;
+    cout << bestOfAll.valorObj << endl;
 
     return 0;
 }
