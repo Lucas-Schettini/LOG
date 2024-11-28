@@ -64,17 +64,6 @@ vector<InsertionInfo> calcularCustoInsercao(Solution& s, vector<int>& CL, Data& 
     return custoInsercao;
 }
 
-// void verifica_rep(int& num1, int& num2, int& num3, size_t& dimension){    // evitar repetições no RNG
-//     while(num1 == num2 || num2 == num3 || num1 == num3){
-//         if(num1 == num2){
-//             num2 = 2 + (rand() % (dimension-1));
-//         } else if(num1 == num3){
-//             num3 = 2 + (rand() % (dimension-1));
-//         } else if(num2 == num3){
-//             num3 = 2 + (rand() % (dimension-1));
-//         }
-//     }
-// }
 void verifica_rep(int& num1, int& num2, int& num3, size_t& dimension){    // evitar repetições no RNG
 
     while(num1 == num2 || num2 == num3 || num1 == num3){
@@ -104,34 +93,6 @@ vector<int> escolher3NosAleatorios(Solution *s, size_t& dimension){
 
     return s->sequencia;
 }
-
-// vector<int> escolher3NosAleatorios(Solution &s, Data& data){
-
-//     int dimension = data.getDimension();
-
-//     int sP_rand1, sP_rand2, sP_rand3; // nós aleatórios para a solução parcial
-
-//     sP_rand1 = 2 + (rand() % (dimension-1)); // declaração dos nós aleatórios
-//     sP_rand2 = 2 + (rand() % (dimension-1));
-//     sP_rand3 = 2 + (rand() % (dimension-1));
-
-//     // verifica_rep(sP_rand1, sP_rand2, sP_rand3, dimension);
-//     while(sP_rand1 == sP_rand2 || sP_rand2 == sP_rand3 || sP_rand1 == sP_rand3){
-//         if(sP_rand1 == sP_rand2){
-//             sP_rand2 = 2 + (rand() % (dimension-1));
-//         } else if(sP_rand1 == sP_rand3){
-//             sP_rand3 = 2 + (rand() % (dimension-1));
-//         } else if(sP_rand2 == sP_rand3){
-//             sP_rand3 = 2 + (rand() % (dimension-1));
-//         }
-//     }
-
-//     s.sequencia.insert(s.sequencia.begin() + 1, sP_rand1); // inserção dos nós na sequencia da solução parcial
-//     s.sequencia.insert(s.sequencia.begin() + 2, sP_rand2);
-//     s.sequencia.insert(s.sequencia.begin() + 3, sP_rand3);
-
-//     return s.sequencia;
-// }
 
 vector<int> nosRestantes(Solution *s, vector<int> *V){
     int position [3];
@@ -184,7 +145,6 @@ Solution Construcao(Solution &s, Data& data)
         if (it != CL.end()) {
             CL.erase(it);
         }
-        //custoInsercao.erase(custoInsercao.begin() + selecionado);
         
     }
 
@@ -222,21 +182,6 @@ bool bestImprovementSwap(Solution& s, Data& data){
                         + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
             }
 
-            // double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
-            //                + data.getDistance(vi_prev, vj) + data.getDistance(vj, vi_next) 
-            //                - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
-            //                + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next)
-            //                + (2*data.getDistance(vi,vj)); // OBS:não sei se é genérico
-
-
-            //original:
-            // double delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
-            //                + data.getDistance(vi_prev, vj) + data.getDistance(vj, vi_next) 
-            //                - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
-            //                + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
-
-            //cout << delta << endl;
-
             if (delta < bestDelta)
             {
                 bestDelta = delta;
@@ -245,13 +190,9 @@ bool bestImprovementSwap(Solution& s, Data& data){
             }
         }
     }
-    // cout <<"\n";
-    // cout << bestDelta << endl; debug
 
     if(bestDelta < 0)
-    {
-        //cout << "Valor: " << s.sequencia[best_i] << " " << s.sequencia[best_j] << endl;
-        
+    {        
         swap(s.sequencia[best_i], s.sequencia[best_j]);
         s.valorObj = s.valorObj + bestDelta;
         return true;
@@ -281,7 +222,6 @@ bool bestImprovement2Opt(Solution& s, Data& data){
             double delta = - data.getDistance(vi, vi_next) - data.getDistance(vj, vj_next)
                            + data.getDistance(vi_next, vj_next) + data.getDistance(vi, vj);
 
-            // cout << delta << endl; debug
 
             if (delta < bestDelta){
                 bestDelta = delta;
@@ -290,12 +230,8 @@ bool bestImprovement2Opt(Solution& s, Data& data){
             }
         }
     }
-    // cout <<"\n";
-    // cout << bestDelta << endl; debug
 
     if(bestDelta < 0){
-        // cout << "Valor: " << s.sequencia[best_i] << " " << s.sequencia[best_j] << endl;
-        // cout << "Posição: " << best_i << " " << best_j << endl;
 
         swap(s.sequencia[best_i + 1], s.sequencia[best_j]);
         reverse(s.sequencia.begin() + best_i + 2, s.sequencia.begin() + best_j);
@@ -335,8 +271,6 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
         }
 
         if(bestDelta < 0){
-            //cout << best_i << " " << best_j << endl;
-            //cout << "Valor: " << s.sequencia[best_i] << " " << s.sequencia[best_j] << endl;
 
             s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
             s.sequencia.erase(s.sequencia.begin() + best_i);
@@ -366,18 +300,6 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
                 if(j == i-1){
                     continue;
                 }
-
-                // if(i > j){
-                //     delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_end, vi_next)
-                //             - data.getDistance(vj, vj_next) 
-                //             + data.getDistance(vj, vi_start)
-                //             + data.getDistance(vi_prev, vi_next) + data.getDistance(vi_end, vj_next);
-                // } else{
-                //     delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_end, vi_next)
-                //             - data.getDistance(vj, vj_next) 
-                //             + data.getDistance(vj, vi_start)
-                //             + data.getDistance(vi_prev, vi_next) + data.getDistance(vi_end, vj_next);
-                // } //precisa resolver isso
                 
                 delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_end, vi_next)
                         - data.getDistance(vj, vj_next) 
@@ -393,8 +315,6 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
         }
 
         if(bestDelta < 0){
-            //cout << best_i << " " << best_j << endl;
-            //cout << "Valor: " << s.sequencia[best_i] << " " << s.sequencia[best_j] << endl;
 
             auto start_it = s.sequencia.begin() + best_i;
             auto end_it = start_it + id;
@@ -408,14 +328,6 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
                 s.sequencia.erase(start_it, end_it);
                 s.sequencia.insert(s.sequencia.begin() + best_j + 1 - id, bloco.begin(), bloco.end());
             }
-
-            // s.sequencia.erase(start_it, end_it);
-
-            // if(best_i > best_j){
-            //     s.sequencia.insert(s.sequencia.begin() + best_j + 1, bloco.begin(), bloco.end());
-            // } else{
-            //     s.sequencia.insert(s.sequencia.begin() + best_j + 1 - id, bloco.begin(), bloco.end());
-            // }
 
             s.valorObj = s.valorObj + bestDelta;
             return true;
@@ -436,23 +348,18 @@ void BuscaLocal(Solution& s, Data& data)
         switch (NL[n]){
             case 1:
                 improved = bestImprovementSwap(s, data);
-                //cout << "swap" << endl;
             break;
             case 2:
                 improved = bestImprovement2Opt(s, data);
-                //cout << "2opt" << endl;
             break;
             case 3:
                 improved = bestImprovementOrOpt(s, 1, data); // Reinsertion
-                //cout << "reinsertion" << endl;
             break;
             case 4:
                 improved = bestImprovementOrOpt(s, 2, data); // Or-opt2
-                //cout << "or-opt2" << endl;
             break;
             case 5:
                 improved = bestImprovementOrOpt(s, 3, data); // Or-opt3
-                //cout << "or-opt3" << endl;
             break;
             }
 
@@ -479,7 +386,6 @@ Solution Perturbação(Solution& best, Data& data){
     }
 
     int segStart_1 = 1 + rand() % (best.sequencia.size() - segSize_1 - 1);
-    //int segStart_2 = 1 + rand() % (best.sequencia.size() - segSize_2 - 1);
     int segStart_2;
 
     do {
@@ -488,22 +394,8 @@ Solution Perturbação(Solution& best, Data& data){
 
     } while ((segStart_2 < segStart_1 + segSize_1 && segStart_2 + segSize_2 > segStart_1));
 
-    // do{
-    //     segStart_2 = 1 + rand() % (best.sequencia.size() - segSize_2 - 1);
-
-    // }while((segStart_2 >= segStart_1 && segStart_2 < segSize_1 + segSize_1) || 
-    //        (segStart_1 >= segStart_2 && segStart_1 < segSize_2 + segSize_2)); //evita sobreposição
-
-    // int segSize_1 = 2;
-    // int segSize_2 = 2;
-    // int segStart_1 = 8;
-    // int segStart_2 = 10; // debug
-
     vector<int> seg1(best.sequencia.begin() + segStart_1, best.sequencia.begin() + segSize_1 + segStart_1);
     vector<int> seg2(best.sequencia.begin() + segStart_2, best.sequencia.begin() + segSize_2 + segStart_2);
-
-    // int seg1_end = seg1[segSize_1-1];
-    // int seg2_end = seg2[segSize_2-1];
 
     int dif = segSize_1 - segSize_2;
 
@@ -553,13 +445,6 @@ Solution Perturbação(Solution& best, Data& data){
                     + data.getDistance(best.sequencia[segSize_1 + segStart_1 - 1], best.sequencia[segSize_2 + segStart_2])
                     + data.getDistance(best.sequencia[segSize_2 + segStart_2 - 1], best.sequencia[segStart_1]);
 
-            // delta = - data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_1]) // verificar subtrações
-            //         - data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_1 + segSize_1])
-            //         - data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segStart_2 + segSize_2])
-            //         + data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_2])
-            //         + data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_2 + segSize_2])
-            //         + data.getDistance(best.sequencia[segStart_2], best.sequencia[segStart_1]);
-
         } else{
             delta = - data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_1]) 
                     - data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_1 + segSize_1])
@@ -574,27 +459,9 @@ Solution Perturbação(Solution& best, Data& data){
     }
         
     sPert.valorObj += delta;
-    
-    // cout << "Bloco 1: ";
-
-    // for (int i:seg1){
-    //     cout << i << " ";
-    // }
-
-    // cout << endl << "Start 1: " << segStart_1 << endl;
-
-    // cout << "Bloco 2: ";
-
-    // for(int i:seg2){
-    //     cout << i << " ";
-    // }
-
-    // cout << endl << "Start 2: " << segStart_2 << endl;
 
     return sPert;
 }
-
-// estou compilando com ./tsp instances/teste.tsp
 
 int main(int argc, char** argv)
 {
@@ -602,7 +469,6 @@ int main(int argc, char** argv)
     auto data = Data(argc, argv[1]);
     data.read();
 
-    //Solution s = {{1,1}, 0}; // iniciar solução
     Solution bestOfAll; // solução que será a melhor
     bestOfAll.valorObj = INFINITY;
 
@@ -636,69 +502,13 @@ int main(int argc, char** argv)
             s = Perturbação(best, data);
             IterILS++;
         }
-        //assert(0);
 
         if(best.valorObj < bestOfAll.valorObj){
             bestOfAll = best;
         }
-        // exibirSolucao(bestOfAll);
-        // cout << "\n";
     }
-            // bestOfAll = {{1,1},0};
-            // bestOfAll = Construcao(bestOfAll,data);
-            // int count = 0;
-            // while(count<50){
-            //     BuscaLocal(bestOfAll,data);
-            //     bestOfAll = Perturbação(bestOfAll,data); 
-            //     count++;               
-            // }
     //exibirSolucao(bestOfAll);
     cout << calcularCusto(data, bestOfAll.sequencia) << endl;
 
     return 0;
 }
-//debug
-
-        // s = Construcao(s,data); // solução que será construída
-
-        // exibirSolucao(&s);
-
-        // s.valorObj = calcularCusto(data, s.sequencia);
-
-        // cout << s.valorObj << endl;
-
-        //     // bool improved = true;
-        //     // int count = 0;
-
-        //     // while(count < 10 && improved == true){
-        //     //     bool improved = bestImprovementOrOpt(s,2,data);
-        //     //     //bool improved = bestImprovement2Opt(s,data);
-        //     //     //bool improved = bestImprovementSwap(s,data);
-        //     //     count++;
-                
-        //     //     exibirSolucao(&s); 
-
-        //     //     cout << "Teste: " << s.valorObj << endl;
-
-        //     //     cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
-
-        //     //     if (improved){
-        //     //         cout << "melhorou" << endl;
-        //     //     } else{
-        //     //         cout << "piorou" << endl;
-        //     //         }
-        //     // }
-
-        // BuscaLocal(s,data);
-
-        // exibirSolucao(&s);
-
-        // cout << s.valorObj << endl;
-
-        // s = Perturbação(s,data);
-
-        // exibirSolucao(&s);
-
-        // cout << "Teste: " << s.valorObj << endl;
-
-        // cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
