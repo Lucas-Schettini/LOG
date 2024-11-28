@@ -22,14 +22,14 @@ typedef struct{
     double custo; // delta ao inserir k na aresta {i,j}
 } InsertionInfo;
 
-//construção
+//funções básicas
 
-void exibirSolucao(Solution *s)
+void exibirSolucao(Solution &s)
 {
-    for(int i = 0; i < s->sequencia.size() - 1; i++){
-        cout << s->sequencia[i] << " -> ";
+    for(int i = 0; i < s.sequencia.size() - 1; i++){
+        cout << s.sequencia[i] << " -> ";
     }
-    cout << s->sequencia.back() << endl;
+    cout << s.sequencia.back() << endl;
 }
 
 double calcularCusto(Data& data, vector<int>& v){
@@ -44,6 +44,8 @@ double calcularCusto(Data& data, vector<int>& v){
 
     return custo;
 }
+
+//construção:
 
 vector<InsertionInfo> calcularCustoInsercao(Solution& s, vector<int>& CL, Data& data) 
 {   
@@ -62,6 +64,17 @@ vector<InsertionInfo> calcularCustoInsercao(Solution& s, vector<int>& CL, Data& 
     return custoInsercao;
 }
 
+// void verifica_rep(int& num1, int& num2, int& num3, size_t& dimension){    // evitar repetições no RNG
+//     while(num1 == num2 || num2 == num3 || num1 == num3){
+//         if(num1 == num2){
+//             num2 = 2 + (rand() % (dimension-1));
+//         } else if(num1 == num3){
+//             num3 = 2 + (rand() % (dimension-1));
+//         } else if(num2 == num3){
+//             num3 = 2 + (rand() % (dimension-1));
+//         }
+//     }
+// }
 void verifica_rep(int& num1, int& num2, int& num3, size_t& dimension){    // evitar repetições no RNG
 
     while(num1 == num2 || num2 == num3 || num1 == num3){
@@ -92,6 +105,34 @@ vector<int> escolher3NosAleatorios(Solution *s, size_t& dimension){
     return s->sequencia;
 }
 
+// vector<int> escolher3NosAleatorios(Solution &s, Data& data){
+
+//     int dimension = data.getDimension();
+
+//     int sP_rand1, sP_rand2, sP_rand3; // nós aleatórios para a solução parcial
+
+//     sP_rand1 = 2 + (rand() % (dimension-1)); // declaração dos nós aleatórios
+//     sP_rand2 = 2 + (rand() % (dimension-1));
+//     sP_rand3 = 2 + (rand() % (dimension-1));
+
+//     // verifica_rep(sP_rand1, sP_rand2, sP_rand3, dimension);
+//     while(sP_rand1 == sP_rand2 || sP_rand2 == sP_rand3 || sP_rand1 == sP_rand3){
+//         if(sP_rand1 == sP_rand2){
+//             sP_rand2 = 2 + (rand() % (dimension-1));
+//         } else if(sP_rand1 == sP_rand3){
+//             sP_rand3 = 2 + (rand() % (dimension-1));
+//         } else if(sP_rand2 == sP_rand3){
+//             sP_rand3 = 2 + (rand() % (dimension-1));
+//         }
+//     }
+
+//     s.sequencia.insert(s.sequencia.begin() + 1, sP_rand1); // inserção dos nós na sequencia da solução parcial
+//     s.sequencia.insert(s.sequencia.begin() + 2, sP_rand2);
+//     s.sequencia.insert(s.sequencia.begin() + 3, sP_rand3);
+
+//     return s.sequencia;
+// }
+
 vector<int> nosRestantes(Solution *s, vector<int> *V){
     int position [3];
     for(int i=0; i < 3; i++){
@@ -111,10 +152,6 @@ vector<int> nosRestantes(Solution *s, vector<int> *V){
     return *V;
 }
 
-// void inserirNaSolucao(Solution &s, int selecionado, vector<InsertionInfo>& custoInsercao, vector<int>& CL){
-//     s.sequencia.insert(s.sequencia.begin() + selecionado + 1, custoInsercao[selecionado].noInserido);
-// }
-
 Solution Construcao(Solution &s, Data& data)
 {
     size_t dimension = data.getDimension();
@@ -127,7 +164,7 @@ Solution Construcao(Solution &s, Data& data)
     s.sequencia = escolher3NosAleatorios(&s, dimension);
     vector<int> CL = nosRestantes(&s, &V);
     
-    cout << "\n";
+    //cout << "\n";
 
     while(!CL.empty()) {
 
@@ -442,13 +479,20 @@ Solution Perturbação(Solution& best, Data& data){
     }
 
     int segStart_1 = 1 + rand() % (best.sequencia.size() - segSize_1 - 1);
+    //int segStart_2 = 1 + rand() % (best.sequencia.size() - segSize_2 - 1);
     int segStart_2;
 
-    do{
+    do {
+
         segStart_2 = 1 + rand() % (best.sequencia.size() - segSize_2 - 1);
 
-    }while((segStart_2 >= segStart_1 && segStart_2 < segSize_1 + segSize_1) || 
-           (segStart_1 >= segStart_2 && segStart_1 < segSize_2 + segSize_2)); //evita sobreposição (acho que está errado)
+    } while ((segStart_2 < segStart_1 + segSize_1 && segStart_2 + segSize_2 > segStart_1));
+
+    // do{
+    //     segStart_2 = 1 + rand() % (best.sequencia.size() - segSize_2 - 1);
+
+    // }while((segStart_2 >= segStart_1 && segStart_2 < segSize_1 + segSize_1) || 
+    //        (segStart_1 >= segStart_2 && segStart_1 < segSize_2 + segSize_2)); //evita sobreposição
 
     // int segSize_1 = 2;
     // int segSize_2 = 2;
@@ -531,35 +575,36 @@ Solution Perturbação(Solution& best, Data& data){
         
     sPert.valorObj += delta;
     
-    cout << "Bloco 1: ";
+    // cout << "Bloco 1: ";
 
-    for (int i:seg1){
-        cout << i << " ";
-    }
+    // for (int i:seg1){
+    //     cout << i << " ";
+    // }
 
-    cout << endl << "Start 1: " << segStart_1 << endl;
+    // cout << endl << "Start 1: " << segStart_1 << endl;
 
-    cout << "Bloco 2: ";
+    // cout << "Bloco 2: ";
 
-    for(int i:seg2){
-        cout << i << " ";
-    }
+    // for(int i:seg2){
+    //     cout << i << " ";
+    // }
 
-    cout << endl << "Start 2: " << segStart_2 << endl;
+    // cout << endl << "Start 2: " << segStart_2 << endl;
 
     return sPert;
 }
 
 // estou compilando com ./tsp instances/teste.tsp
 
-int main(int argc, char** argv) // a main é só debug
+int main(int argc, char** argv)
 {
     //Comandos necessarios para leitura da instancia
     auto data = Data(argc, argv[1]);
     data.read();
 
-    Solution s = {{1,1}, 0}; // iniciar solução
+    //Solution s = {{1,1}, 0}; // iniciar solução
     Solution bestOfAll; // solução que será a melhor
+    bestOfAll.valorObj = INFINITY;
 
     int maxIter = 50;
     int maxIterILS;
@@ -573,53 +618,87 @@ int main(int argc, char** argv) // a main é só debug
     // seed para os aleatórios
     srand((unsigned) time(NULL));
 
-    
+    for(int i = 0; i < maxIter; i++){
+        Solution s = {{1,1}, 0};
+        s = Construcao(s,data);
+        Solution best = s;
 
-    //debug
+        int IterILS = 0;
 
-        s = Construcao(s,data); // solução que será construída
+        while(IterILS < maxIterILS){
+            BuscaLocal(s,data);
 
-        exibirSolucao(&s);
+            if(s.valorObj < best.valorObj){
+                best = s;
+                IterILS = 0;
+            }
 
-        s.valorObj = calcularCusto(data, s.sequencia);
+            s = Perturbação(best, data);
+            IterILS++;
+        }
+        //assert(0);
 
-        cout << s.valorObj << endl;
-
-            // bool improved = true;
+        if(best.valorObj < bestOfAll.valorObj){
+            bestOfAll = best;
+        }
+        // exibirSolucao(bestOfAll);
+        // cout << "\n";
+    }
+            // bestOfAll = {{1,1},0};
+            // bestOfAll = Construcao(bestOfAll,data);
             // int count = 0;
-
-            // while(count < 10 && improved == true){
-            //     bool improved = bestImprovementOrOpt(s,2,data);
-            //     //bool improved = bestImprovement2Opt(s,data);
-            //     //bool improved = bestImprovementSwap(s,data);
-            //     count++;
-                
-            //     exibirSolucao(&s); 
-
-            //     cout << "Teste: " << s.valorObj << endl;
-
-            //     cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
-
-            //     if (improved){
-            //         cout << "melhorou" << endl;
-            //     } else{
-            //         cout << "piorou" << endl;
-            //         }
+            // while(count<50){
+            //     BuscaLocal(bestOfAll,data);
+            //     bestOfAll = Perturbação(bestOfAll,data); 
+            //     count++;               
             // }
-
-        BuscaLocal(s,data);
-
-        exibirSolucao(&s);
-
-        cout << s.valorObj << endl;
-
-        s = Perturbação(s,data);
-
-        exibirSolucao(&s);
-
-        cout << "Teste: " << s.valorObj << endl;
-
-        cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
+    //exibirSolucao(bestOfAll);
+    cout << calcularCusto(data, bestOfAll.sequencia) << endl;
 
     return 0;
 }
+//debug
+
+        // s = Construcao(s,data); // solução que será construída
+
+        // exibirSolucao(&s);
+
+        // s.valorObj = calcularCusto(data, s.sequencia);
+
+        // cout << s.valorObj << endl;
+
+        //     // bool improved = true;
+        //     // int count = 0;
+
+        //     // while(count < 10 && improved == true){
+        //     //     bool improved = bestImprovementOrOpt(s,2,data);
+        //     //     //bool improved = bestImprovement2Opt(s,data);
+        //     //     //bool improved = bestImprovementSwap(s,data);
+        //     //     count++;
+                
+        //     //     exibirSolucao(&s); 
+
+        //     //     cout << "Teste: " << s.valorObj << endl;
+
+        //     //     cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
+
+        //     //     if (improved){
+        //     //         cout << "melhorou" << endl;
+        //     //     } else{
+        //     //         cout << "piorou" << endl;
+        //     //         }
+        //     // }
+
+        // BuscaLocal(s,data);
+
+        // exibirSolucao(&s);
+
+        // cout << s.valorObj << endl;
+
+        // s = Perturbação(s,data);
+
+        // exibirSolucao(&s);
+
+        // cout << "Teste: " << s.valorObj << endl;
+
+        // cout << "Real: " << calcularCusto(data, s.sequencia) << endl;
