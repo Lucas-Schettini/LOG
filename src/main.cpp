@@ -22,6 +22,25 @@ typedef struct{
     double custo; // delta ao inserir k na aresta {i,j}
 } InsertionInfo;
 
+struct Subsequence{
+    double T, C;
+    int W;
+    int first, last; // primeiro e ultimo nos da subsequencia
+    inline static Subsequence Concatenate(Subsequence &sigma_1, Subsequence &sigma_2){
+        
+        Subsequence sigma;
+        double temp = t[sigma_1.last][sigma_2.first];
+        sigma.W = sigma_1.W + sigma_2.W;
+        sigma.T = sigma_1.T + temp + sigma_2.T;
+        sigma.C = sigma_1.C + sigma_2.W * (sigma_1.T + temp) + sigma_2.C;
+        sigma.first = sigma_1.first;
+        sigma.last = sigma_2.last;
+
+        return sigma;
+    }
+
+};
+
 //funções básicas
 
 void exibirSolucao(Solution &s)
@@ -447,6 +466,46 @@ Solution Perturbação(Solution& best, Data& data){
     return sPert;
 }
 
+//MLP
+
+void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix){
+
+    // n: numero de nos da instancia
+    // s: solucao corrente
+    // subseq_matrix = vector<vector<Subsequence>>(n, vector<Subsequence>(n));
+
+    int n = s.sequencia.size();
+
+    // subsequências de um único nó
+    for (int i = 0; i < n; i++){
+
+        int v = s.sequencia[i];
+        subseq_matrix[i][i].W = (i > 0);
+        subseq_matrix[i][i].C = 0;
+        subseq_matrix[i][i].T = 0;
+        subseq_matrix[i][i].first = s.sequencia[i];
+        subseq_matrix[i][i].last = s.sequencia[i];
+    }
+
+    for (int i = 0; i < n; i++){
+        for (int j = i + 1; j < n; j++){
+            subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j - 1], subseq_matrix[j][j]);
+        }
+    }
+
+    // subsequências invertidas (necessárias para o 2-opt)
+    for (int i = n - 1; i >= 0; i--){
+        for (int j = i - 1; j >= 0; j--){
+            subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j]);
+        }
+    }
+}
+
+Solution ConstrucaoMLP(Solution &s, Data& data, double R){
+
+}
+
+
 int main(int argc, char** argv)
 {
     //Comandos necessarios para leitura da instancia
@@ -468,30 +527,38 @@ int main(int argc, char** argv)
     // seed para os aleatórios
     srand((unsigned) time(NULL));
 
-    for(int i = 0; i < maxIter; i++){
-        Solution s = {{1,1}, 0};
-        s = Construcao(s,data);
-        s.valorObj = calcularCusto(data, s.sequencia);
-        Solution best = s;
+    // for(int i = 0; i < maxIter; i++){
+    //     Solution s = {{1,1}, 0};
+    //     s = Construcao(s,data);
+    //     s.valorObj = calcularCusto(data, s.sequencia);
+    //     Solution best = s;
 
-        int IterILS = 0;
+    //     int IterILS = 0;
 
-        while(IterILS < maxIterILS){
-            BuscaLocal(s,data);
+    //     while(IterILS < maxIterILS){
+    //         BuscaLocal(s,data);
 
-            if(s.valorObj < best.valorObj){
-                best = s;
-                IterILS = 0;
-            }
+    //         if(s.valorObj < best.valorObj){
+    //             best = s;
+    //             IterILS = 0;
+    //         }
 
-            s = Perturbação(best, data);
-            IterILS++;
-        }
+    //         s = Perturbação(best, data);
+    //         IterILS++;
+    //     }
 
-        if(best.valorObj < bestOfAll.valorObj){
-            bestOfAll = best;
-        }
-    }
+    //     if(best.valorObj < bestOfAll.valorObj){
+    //         bestOfAll = best;
+    //     }
+    // }
+
+    //testes:
+
+    Solution s = {{1,1}, 0};
+    s = Construcao(s,data);
+
+    vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
+    UpdateAllSubseq(s, subseq_matrix);
 
     //exibirSolucao(bestOfAll);
     cout << bestOfAll.valorObj << endl;
