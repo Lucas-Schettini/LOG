@@ -26,10 +26,11 @@ struct Subsequence{
     double T, C;
     int W;
     int first, last; // primeiro e ultimo nos da subsequencia
-    inline static Subsequence Concatenate(Subsequence &sigma_1, Subsequence &sigma_2){
+    inline static Subsequence Concatenate(Subsequence &sigma_1, Subsequence &sigma_2, Data &data){
         
         Subsequence sigma;
-        double temp = t[sigma_1.last][sigma_2.first];
+        //double temp = t[sigma_1.last][sigma_2.first];
+        double temp = data.getDistance(sigma_1.last, sigma_2.first);
         sigma.W = sigma_1.W + sigma_2.W;
         sigma.T = sigma_1.T + temp + sigma_2.T;
         sigma.C = sigma_1.C + sigma_2.W * (sigma_1.T + temp) + sigma_2.C;
@@ -218,9 +219,10 @@ bool bestImprovementSwap(Solution& s, Data& data){
 
 }
 
-bool bestImprovement2Opt(Solution& s, Data& data){
+bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     double bestDelta = 0;
     int best_i, best_j;
+    int n = s.sequencia.size();
 
     for(int i = 1; i < s.sequencia.size() - 1; i++){
 
@@ -229,6 +231,9 @@ bool bestImprovement2Opt(Solution& s, Data& data){
 
         for(int j = i + 1; j < s.sequencia.size() - 1; j++){
             
+            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][i], data);
+            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n], data);
+
             if(i == j + 1 || i == j - 1 ){ //garantia que os nós são adjacentes
                continue; 
             }
@@ -340,7 +345,7 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
         return false;
 }
 
-void BuscaLocal(Solution& s, Data& data)
+void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_matrix)
 {
     vector<int> NL = {1, 2, 3, 4, 5};
     bool improved = false;
@@ -353,7 +358,7 @@ void BuscaLocal(Solution& s, Data& data)
                 improved = bestImprovementSwap(s, data);
             break;
             case 2:
-                improved = bestImprovement2Opt(s, data);
+                improved = bestImprovement2Opt(s, data, subseq_matrix);
             break;
             case 3:
                 improved = bestImprovementOrOpt(s, 1, data); // Reinsertion
@@ -468,7 +473,7 @@ Solution Perturbação(Solution& best, Data& data){
 
 //MLP
 
-void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix){
+void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix, Data &data){
 
     // n: numero de nos da instancia
     // s: solucao corrente
@@ -489,22 +494,17 @@ void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix){
 
     for (int i = 0; i < n; i++){
         for (int j = i + 1; j < n; j++){
-            subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j - 1], subseq_matrix[j][j]);
+            subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j - 1], subseq_matrix[j][j], data);
         }
     }
 
     // subsequências invertidas (necessárias para o 2-opt)
     for (int i = n - 1; i >= 0; i--){
         for (int j = i - 1; j >= 0; j--){
-            subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j]);
+            subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j], data);
         }
     }
 }
-
-Solution ConstrucaoMLP(Solution &s, Data& data, double R){
-
-}
-
 
 int main(int argc, char** argv)
 {
@@ -557,11 +557,21 @@ int main(int argc, char** argv)
     Solution s = {{1,1}, 0};
     s = Construcao(s,data);
 
+    s.valorObj = calcularCusto(data, s.sequencia);
+
     vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
-    UpdateAllSubseq(s, subseq_matrix);
+    UpdateAllSubseq(s, subseq_matrix, data);
+
+    bestImprovement2Opt(s,data,subseq_matrix);
+
+    // Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][i]);
+    // Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n]);
+
+    //Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][0], subseq_matrix[][]);
+    //Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n]);
 
     //exibirSolucao(bestOfAll);
-    cout << bestOfAll.valorObj << endl;
+    //cout << bestOfAll.valorObj << endl;
 
     return 0;
 }
