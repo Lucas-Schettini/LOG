@@ -171,9 +171,10 @@ Solution Construcao(Solution &s, Data& data)
 
 //improvement:
 
-bool bestImprovementSwap(Solution& s, Data& data){
+bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     double bestDelta = 0;
     int best_i, best_j;
+    int n = s.sequencia.size() -1;
 
     for(int i = 1; i < s.sequencia.size() - 1; i++)
     {
@@ -183,6 +184,9 @@ bool bestImprovementSwap(Solution& s, Data& data){
 
         for(int j = i + 1; j < s.sequencia.size() - 1; j++)
         {
+            //precisa colocar baseado no Swap 
+            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][i], data);
+            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n], data);
 
             int vj = s.sequencia[j];
             int vj_next = s.sequencia[j + 1];
@@ -223,7 +227,7 @@ bool bestImprovementSwap(Solution& s, Data& data){
 bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     double bestDelta = 0;
     int best_i, best_j;
-    int n = s.sequencia.size();
+    int n = s.sequencia.size() -1;
 
     for(int i = 1; i < s.sequencia.size() - 1; i++){
 
@@ -234,6 +238,8 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
             
             Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][i], data);
             Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n], data);
+
+            cout << "Sigma2: " << sigma_2.C << endl;
 
             if(sigma_2.C < s.valorObj){
                 if(i == j + 1 || i == j - 1 ){ //garantia que os nós são adjacentes
@@ -251,7 +257,10 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
                     bestDelta = delta;
                     best_i = i;
                     best_j = j;
-                }                
+                }
+
+                UpdateAllSubseq(s,subseq_matrix,data);
+
             } else {
                 return false;
             }
@@ -360,7 +369,7 @@ void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_mat
         int n = rand() % (NL.size());
         switch (NL[n]){
             case 1:
-                improved = bestImprovementSwap(s, data);
+                improved = bestImprovementSwap(s, data, subseq_matrix);
             break;
             case 2:
                 improved = bestImprovement2Opt(s, data, subseq_matrix);
@@ -567,12 +576,26 @@ int main(int argc, char** argv)
         Solution s = {{1,1}, 0};
         s = Construcao(s,data);
 
-        s.valorObj = calcularCusto(data, s.sequencia);
+        exibirSolucao(s);
 
         vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
         UpdateAllSubseq(s, subseq_matrix, data);
 
+        s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
+
+        // for (int i = 0; i < s.sequencia.size(); i++){
+        //     for (int j = 0; j < s.sequencia.size(); j++){
+        //         cout << subseq_matrix[i][j].C << " ";
+        //     }
+        //     cout << "\n";
+        // }
+
+        cout << "\nValor OBj:" << s.valorObj << endl; 
+
         bestImprovement2Opt(s,data,subseq_matrix);
+        UpdateAllSubseq(s, subseq_matrix, data);
+
+        exibirSolucao(s);
 
     return 0;
 }
