@@ -208,62 +208,45 @@ void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix, Da
 
 bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     //double bestDelta = 0;
-    double bestDelta = s.sequencia.size();
+    double bestDelta = s.valorObj;
     int best_i, best_j;
+    // Subsequence sigma_1, sigma_2;
     int n = s.sequencia.size() -1;
 
     for(int i = 1; i < s.sequencia.size() - 1; i++)
     {
-        // int vi = s.sequencia[i];
-        // int vi_next = s.sequencia[i + 1];
-        // int vi_prev = s.sequencia[i - 1];
 
         for(int j = i + 1; j < s.sequencia.size() - 1; j++)
         {
-            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[i][j], data);
-            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n], data);
+            if(i==j){
+                continue;
+            }
 
-            cout << "Sigma2: " << sigma_2.C << endl; 
+            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][j], data);
+            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i+1][j-1], data);
+            Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[i][i], data);
+            Subsequence sigma_4 = Subsequence::Concatenate(sigma_3, subseq_matrix[j+1][s.sequencia.size()-1], data);
 
-            // int vj = s.sequencia[j];
-            // int vj_next = s.sequencia[j + 1];
-            // int vj_prev = s.sequencia[j - 1];
+            //cout << "Sigma2: " << sigma_2.C << endl; 
 
-            //double delta = 0;
-
-            if(sigma_2.C < s.valorObj){
-                if(sigma_2.C < bestDelta){
-                    bestDelta = sigma_2.C;
+            if(sigma_4.C < s.valorObj){
+                if(sigma_4.C < bestDelta){
+                    bestDelta = sigma_4.C;
                     best_i = i;
                     best_j = j;
                 }
             }
-
-            // if(j == i+1 || j == i-1){
-            //     delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
-            //             - data.getDistance(vj, vj_next) + data.getDistance(vi_prev, vj)
-            //             + data.getDistance(vi, vj_next) + data.getDistance(vi,vj); 
-            // } else{
-            //     delta = - data.getDistance(vi_prev, vi) - data.getDistance(vi, vi_next)
-            //             + data.getDistance(vi_prev, vj) + data.getDistance(vj, vi_next) 
-            //             - data.getDistance(vj_prev, vj) - data.getDistance(vj, vj_next)
-            //             + data.getDistance(vj_prev, vi) + data.getDistance(vi, vj_next);
-            // }
-
-            // if (delta < bestDelta)
-            // {
-            //     bestDelta = delta;
-            //     best_i = i;
-            //     best_j = j;
-            // }
         }
     }
 
     if(bestDelta < s.valorObj)
     {        
         swap(s.sequencia[best_i], s.sequencia[best_j]);
+
         s.valorObj = bestDelta;
+
         UpdateAllSubseq(s,subseq_matrix,data);
+
         return true;
     }
     return false;
@@ -277,12 +260,7 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
     int n = s.sequencia.size() -1;
 
     for(int i = 1; i < s.sequencia.size() - 1; i++){
-
-        // int vi = s.sequencia[i];
-        // int vi_next = s.sequencia[i+1];
-
         for(int j = i + 1; j < s.sequencia.size() - 1; j++){
-
             if(i == j + 1 || i == j - 1 ){ //garantia que os nós são adjacentes
                 continue; 
             }
@@ -290,38 +268,23 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
             Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][i], data);
             Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j+1][n], data);
 
-            //cout << "Sigma2: " << sigma_2.C << endl;
+            //cout << "Sigma2: " << sigma_2.C <<" Cords: " << i << " " << j << endl;
 
             if(sigma_2.C < s.valorObj){
-
-                // int vj = s.sequencia[j];
-                // int vj_next = s.sequencia[j + 1];
-
-                // double delta = - data.getDistance(vi, vi_next) - data.getDistance(vj, vj_next)
-                //             + data.getDistance(vi_next, vj_next) + data.getDistance(vi, vj);
-
-
-                // if (delta < bestDelta){
-                //     bestDelta = delta;
-                //     best_i = i;
-                //     best_j = j;
-                // }
 
                 if (sigma_2.C < bestDelta){
                     bestDelta = sigma_2.C;
                     best_i = i;
                     best_j = j;
                 }
-
-            // } else {
-            //     return false;
             }
         }
     }
 
     if(bestDelta < s.valorObj){
-        swap(s.sequencia[best_i + 1], s.sequencia[best_j]);
-        reverse(s.sequencia.begin() + best_i + 2, s.sequencia.begin() + best_j);
+        //cout << "best_i: " << best_i << " best_j: " << best_j<< endl;
+        swap(s.sequencia[best_i], s.sequencia[best_j]);
+        reverse(s.sequencia.begin() + best_i + 1, s.sequencia.begin() + best_j);
 
         //s.valorObj = s.valorObj + bestDelta;
 
@@ -602,21 +565,20 @@ int main(int argc, char** argv)
         vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
         UpdateAllSubseq(s, subseq_matrix, data);
 
-        //isso só faz sentido se a sequencia for (1,2,3,4,5,6)
         s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
 
-        for (int i = 0; i < s.sequencia.size(); i++){
-            for (int j = 0; j < s.sequencia.size(); j++){
-                cout << subseq_matrix[i][j].C << " ";
-            }
-            cout << "\n";
-        }
+        // for (int i = 0; i < s.sequencia.size(); i++){
+        //     for (int j = 0; j < s.sequencia.size(); j++){
+        //         cout << subseq_matrix[i][j].C << " ";
+        //     }
+        //     cout << "\n";
+        // }
 
         cout << "\nValor OBj 1:" << s.valorObj << endl; 
 
-        bestImprovement2Opt(s,data,subseq_matrix);
-        //bestImprovementSwap(s,data,subseq_matrix);
-        UpdateAllSubseq(s, subseq_matrix, data);
+        //bestImprovement2Opt(s,data,subseq_matrix);
+        bestImprovementSwap(s,data,subseq_matrix);
+        //UpdateAllSubseq(s, subseq_matrix, data);
 
         exibirSolucao(s);
 
@@ -625,6 +587,13 @@ int main(int argc, char** argv)
         s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
 
         cout << "Valor OBJ pos improvment(real): " << s.valorObj << endl;
+
+        // for (int i = 0; i < s.sequencia.size(); i++){
+        //     for (int j = 0; j < s.sequencia.size(); j++){
+        //         cout << subseq_matrix[i][j].C << " ";
+        //     }
+        //     cout << "\n";
+        // }
 
     return 0;
 }
