@@ -229,7 +229,7 @@ bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &s
 
             //cout << "Sigma2: " << sigma_2.C << endl; 
 
-            if(sigma_4.C < s.valorObj){
+            if(sigma_4.C < s.valorObj || sigma_4.C < bestDelta){
                 if(sigma_4.C < bestDelta){
                     bestDelta = sigma_4.C;
                     best_i = i;
@@ -271,7 +271,6 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
             //cout << "Sigma2: " << sigma_2.C <<" Cords: " << i << " " << j << endl;
 
             if(sigma_2.C < s.valorObj){
-
                 if (sigma_2.C < bestDelta){
                     bestDelta = sigma_2.C;
                     best_i = i;
@@ -298,25 +297,16 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
     return false;
 }
 
-bool bestImprovementOrOpt(Solution& s, int id, Data& data){
-    double bestDelta = 0;
+bool bestImprovementOrOpt(Solution& s, int id, Data& data, vector<vector<Subsequence>> &subseq_matrix){
+    // double bestDelta = 0;
+    double bestDelta = s.valorObj;
     int best_i, best_j;
-    double delta = 0;
+    //double delta = 0;
 
-    // if(id == 1){
-    //     id = 0;
-    // }
+    int n = s.sequencia.size() -1;
 
     for (int i = 1; i < s.sequencia.size() - 1 - id; i++){
-
-        int vi_prev = s.sequencia[i - 1];
-        int vi_start = s.sequencia[i];
-        int vi_end = s.sequencia[i + id - 1];
-        int vi_next = s.sequencia[i + id];
-
         for(int j = 1; j < s.sequencia.size() - 1; j++){
-            int vj = s.sequencia[j];
-            int vj_next = s.sequencia[j+1];
 
             if (j >= i && j <= i + id - 1){
                 continue;
@@ -326,26 +316,25 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
                 continue;
             }
 
-            if(id == 1){
-                delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_start, vi_next)
-                        + data.getDistance(vi_prev, vi_next) + data.getDistance(vj, vi_start)
-                        - data.getDistance(vj, vj_next) + data.getDistance(vi_start, vj_next);
-            } else{
-                delta = - data.getDistance(vi_prev, vi_start) - data.getDistance(vi_end, vi_next)
-                        - data.getDistance(vj, vj_next) 
-                        + data.getDistance(vj, vi_start)
-                        + data.getDistance(vi_prev, vi_next) + data.getDistance(vi_end, vj_next);
+            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[i+id][j], data);
+            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i][i+id-1], data);
+            Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[j+1][n], data);
+
+            //cout << "teste: " << sigma_3.C << endl;
+
+            if(sigma_3.C < s.valorObj){
+                
+                if (sigma_3.C < bestDelta){
+                    bestDelta = sigma_3.C;
+                    best_i = i;
+                    best_j = j;
+                }
             }
 
-            if (delta < bestDelta){
-                bestDelta = delta;
-                best_i = i;
-                best_j = j;
-            }
         }
     }
 
-    if(bestDelta < 0){
+    if(bestDelta < s.valorObj){
         if(id == 1){
             s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
             if(best_i > best_j){
@@ -370,8 +359,8 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data){
             }
 
         }
-
-        s.valorObj = s.valorObj + bestDelta;
+        UpdateAllSubseq(s,subseq_matrix,data);
+        s.valorObj = bestDelta;
         return true;
     }
 
@@ -394,13 +383,13 @@ void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_mat
                 improved = bestImprovement2Opt(s, data, subseq_matrix);
             break;
             case 3:
-                improved = bestImprovementOrOpt(s, 1, data); // Reinsertion
+                improved = bestImprovementOrOpt(s, 1, data, subseq_matrix); // Reinsertion
             break;
             case 4:
-                improved = bestImprovementOrOpt(s, 2, data); // Or-opt2
+                improved = bestImprovementOrOpt(s, 2, data, subseq_matrix); // Or-opt2
             break;
             case 5:
-                improved = bestImprovementOrOpt(s, 3, data); // Or-opt3
+                improved = bestImprovementOrOpt(s, 3, data, subseq_matrix); // Or-opt3
             break;
             }
 
@@ -577,7 +566,8 @@ int main(int argc, char** argv)
         cout << "\nValor OBj 1:" << s.valorObj << endl; 
 
         //bestImprovement2Opt(s,data,subseq_matrix);
-        bestImprovementSwap(s,data,subseq_matrix);
+        //bestImprovementSwap(s,data,subseq_matrix);
+        //bestImprovementOrOpt(s,3,data,subseq_matrix);
         //UpdateAllSubseq(s, subseq_matrix, data);
 
         exibirSolucao(s);
