@@ -6,6 +6,7 @@
 #include <cmath>
 #include <algorithm> 
 #include <limits>
+#include <chrono>
 
 using namespace std;
 
@@ -69,13 +70,16 @@ double calcularCusto(Data& data, vector<int>& v){
 
 vector<InsertionInfo> calcularCustoInsercao(Solution& s, vector<int>& CL, Data& data) 
 {   
-    vector<InsertionInfo> custoInsercao((s.sequencia.size() - 1) * CL.size()); //o original tava estranho
+    vector<InsertionInfo> custoInsercao((s.sequencia.size() - 1) * CL.size()); 
     int l = 0;
     for(int a = 0; a < s.sequencia.size() - 1; a++) {
         int i = s.sequencia[a];
         int j = s.sequencia[a + 1];
         for (auto k : CL) {
             custoInsercao[l].custo = data.getDistance(i,k) + data.getDistance(j,k) - data.getDistance(i,j); 
+            // Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i], subseq_matrix[k][k],data);
+            // Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j][s.sequencia.size()-1],data); 
+            // custoInsercao[l].custo = sigma_2.C;
             custoInsercao[l].noInserido = k;
             custoInsercao[l].arestaRemovida = a;
             l++;
@@ -156,6 +160,9 @@ Solution Construcao(Solution &s, Data& data)
         }); // não entendi muito bem a comparação lambda em termos genéricos, mas eu sei o que ela faz aqui
 
         double alpha = (double) rand() / RAND_MAX;
+
+        // int alpha_int = rand() % (26);
+        // double alpha = (double) alpha_int/100;
 
         int selecionado = rand() % ((int) ceil(alpha * custoInsercao.size()));
 
@@ -403,7 +410,7 @@ void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_mat
 
 //perturbação:
 
-Solution Perturbação(Solution& best, Data& data){
+Solution Perturbação(Solution& best, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     Solution sPert = best;
 
     int segSize_1 = 2 + rand() % ((best.sequencia.size() - 1)/10);
@@ -443,58 +450,17 @@ Solution Perturbação(Solution& best, Data& data){
         sPert.sequencia.insert(sPert.sequencia.begin() + segStart_1, seg2.begin(), seg2.end());
         sPert.sequencia.insert(sPert.sequencia.begin() + segStart_2 - dif, seg1.begin(), seg1.end());
     }
-
-    double delta;
-
-    if(segStart_1 > segStart_2){
-        if(segStart_1 == segStart_2 + segSize_2){
-            delta = - data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_1])
-                    - data.getDistance(best.sequencia[segStart_2 - 1], best.sequencia[segStart_2])
-                    - data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_1 + segSize_1])
-                    + data.getDistance(best.sequencia[segStart_1], best.sequencia[segStart_2 - 1])
-                    + data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_2])
-                    + data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segStart_1 + segSize_1]);
-
-        } else{
-            delta = - data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_1]) 
-                    - data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_1 + segSize_1])
-                    - data.getDistance(best.sequencia[segStart_2 - 1], best.sequencia[segStart_2])
-                    - data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segStart_2 + segSize_2])
-                    + data.getDistance(best.sequencia[segStart_1], best.sequencia[segStart_2 - 1])
-                    + data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_2 + segSize_2])
-                    + data.getDistance(best.sequencia[segStart_2], best.sequencia[segStart_1 - 1])
-                    + data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segStart_1 + segSize_1]);
-        }
-
-    } else{
-        if(segStart_2 == segStart_1 + segSize_1){
-            delta = - data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_1])
-                    - data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segSize_2 + segStart_2])
-                    - data.getDistance(best.sequencia[segSize_1 + segStart_1 - 1], best.sequencia[segStart_2])
-                    + data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_2])
-                    + data.getDistance(best.sequencia[segSize_1 + segStart_1 - 1], best.sequencia[segSize_2 + segStart_2])
-                    + data.getDistance(best.sequencia[segSize_2 + segStart_2 - 1], best.sequencia[segStart_1]);
-
-        } else{
-            delta = - data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_1]) 
-                    - data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_1 + segSize_1])
-                    - data.getDistance(best.sequencia[segStart_2 - 1], best.sequencia[segStart_2])
-                    - data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segStart_2 + segSize_2])
-                    + data.getDistance(best.sequencia[segStart_1 - 1], best.sequencia[segStart_2])
-                    + data.getDistance(best.sequencia[segStart_2 + segSize_2 - 1], best.sequencia[segStart_1 + segSize_1])
-                    + data.getDistance(best.sequencia[segStart_2 - 1], best.sequencia[segStart_1])
-                    + data.getDistance(best.sequencia[segStart_1 + segSize_1 - 1], best.sequencia[segStart_2 + segSize_2]);
-
-        }
-    }
         
-    sPert.valorObj += delta;
+    UpdateAllSubseq(sPert,subseq_matrix,data);
+
+    sPert.valorObj = subseq_matrix[0][sPert.sequencia.size() - 1].C;
 
     return sPert;
 }
 
 int main(int argc, char** argv)
 {
+    auto start = chrono::high_resolution_clock::now();
     //Comandos necessarios para leitura da instancia
     auto data = Data(argc, argv[1]);
     data.read();
@@ -502,88 +468,100 @@ int main(int argc, char** argv)
     Solution bestOfAll; // solução que será a melhor
     bestOfAll.valorObj = INFINITY;
 
-    int maxIter = 50;
-    int maxIterILS;
+    // int maxIter = 50;
+    // int maxIterILS;
 
-    if(data.getDimension() >= 150){
-        maxIterILS = (data.getDimension()) / 2;
-    } else{
-        maxIterILS = data.getDimension();
-    }
-
-    // seed para os aleatórios
-    srand((unsigned) time(NULL));
-
-    // for(int i = 0; i < maxIter; i++){
-    //     Solution s = {{1,1}, 0};
-    //     s = Construcao(s,data);
-    //     s.valorObj = calcularCusto(data, s.sequencia);
-    //     Solution best = s;
-
-    //     vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
-
-    //     int IterILS = 0;
-
-    //     while(IterILS < maxIterILS){
-    //         BuscaLocal(s,data,subseq_matrix);
-
-    //         if(s.valorObj < best.valorObj){
-    //             best = s;
-    //             IterILS = 0;
-    //         }
-
-    //         s = Perturbação(best, data);
-    //         IterILS++;
-    //     }
-
-    //     if(best.valorObj < bestOfAll.valorObj){
-    //         bestOfAll = best;
-    //     }
+    // if(data.getDimension() >= 150){
+    //     maxIterILS = (data.getDimension()) / 2;
+    // } else{
+    //     maxIterILS = data.getDimension();
     // }
 
-    // exibirSolucao(bestOfAll);
-    // cout << bestOfAll.valorObj << endl;
+    int maxIter = 10;
+    int maxIterILS = min(100, data.getDimension());
 
-        //testes:
+    // // seed para os aleatórios
+    srand((unsigned) time(NULL));
 
+    for(int i = 0; i < maxIter; i++){
         Solution s = {{1,1}, 0};
         s = Construcao(s,data);
-
-        exibirSolucao(s);
 
         vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
         UpdateAllSubseq(s, subseq_matrix, data);
 
-        s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
+        //s.valorObj = calcularCusto(data, s.sequencia);
+        s.valorObj = subseq_matrix[0][s.sequencia.size()-1].C;
 
-        // for (int i = 0; i < s.sequencia.size(); i++){
-        //     for (int j = 0; j < s.sequencia.size(); j++){
-        //         cout << subseq_matrix[i][j].C << " ";
-        //     }
-        //     cout << "\n";
-        // }
+        Solution best = s;
 
-        cout << "\nValor OBj 1:" << s.valorObj << endl; 
+        int IterILS = 0;
 
-        //bestImprovement2Opt(s,data,subseq_matrix);
-        //bestImprovementSwap(s,data,subseq_matrix);
-        //bestImprovementOrOpt(s,3,data,subseq_matrix);
-        //UpdateAllSubseq(s, subseq_matrix, data);
+        while(IterILS < maxIterILS){
+            BuscaLocal(s,data,subseq_matrix);
 
-        exibirSolucao(s);
+            if(s.valorObj < best.valorObj){
+                best = s;
+                IterILS = 0;
+            }
 
-        cout << "Valor OBJ pos improvment(teste): " << s.valorObj << endl;
+            s = Perturbação(best, data, subseq_matrix);
+            IterILS++;
+        }
 
-        s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
+        if(best.valorObj < bestOfAll.valorObj){
+            bestOfAll = best;
+        }
+    }
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> duration = end - start;
 
-        cout << "Valor OBJ pos improvment(real): " << s.valorObj << endl;
+    exibirSolucao(bestOfAll);
+    cout << bestOfAll.valorObj << endl;
+    cout << "Tempo de execução: " << duration.count() << endl;
 
-        // for (int i = 0; i < s.sequencia.size(); i++){
-        //     for (int j = 0; j < s.sequencia.size(); j++){
-        //         cout << subseq_matrix[i][j].C << " ";
-        //     }
-        //     cout << "\n";
-        // }
+        //testes:
+
+        // Solution s = {{1,1}, 0};
+        // s = Construcao(s,data);
+
+        // exibirSolucao(s);
+
+        // vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
+        // UpdateAllSubseq(s, subseq_matrix, data);
+
+        // s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
+
+        // // for (int i = 0; i < s.sequencia.size(); i++){
+        // //     for (int j = 0; j < s.sequencia.size(); j++){
+        // //         cout << subseq_matrix[i][j].C << " ";
+        // //     }
+        // //     cout << "\n";
+        // // }
+
+        // cout << "\nValor OBj 1:" << s.valorObj << endl; 
+
+        // //bestImprovement2Opt(s,data,subseq_matrix);
+        // //bestImprovementSwap(s,data,subseq_matrix);
+        // // bestImprovementOrOpt(s,1,data,subseq_matrix);
+        // //UpdateAllSubseq(s, subseq_matrix, data);
+
+        // BuscaLocal(s,data,subseq_matrix);
+
+        // exibirSolucao(s);
+
+        // cout << "Valor OBJ pos improvment(teste): " << s.valorObj << endl;
+
+        // s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
+
+        // cout << "Valor OBJ pos improvment(real): " << s.valorObj << endl;
+
+        // // for (int i = 0; i < s.sequencia.size(); i++){
+        // //     for (int j = 0; j < s.sequencia.size(); j++){
+        // //         cout << subseq_matrix[i][j].C << " ";
+        // //     }
+        // //     cout << "\n";
+        // // }
 
     return 0;
 }
