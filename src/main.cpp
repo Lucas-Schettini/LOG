@@ -43,7 +43,7 @@ struct Subsequence{
 
 };
 
-//funções básicas
+//funções básicas:
 
 void exibirSolucao(Solution &s)
 {
@@ -53,130 +53,52 @@ void exibirSolucao(Solution &s)
     cout << s.sequencia.back() << endl;
 }
 
-double calcularCusto(Data& data, vector<int>& v){
-
-    double custo = 0;
-    
-    //maneira de iterar sobre os valores do vector a partir de seu tamanho dado pela funcao size()
-    for(int i = 0; i < v.size() - 1; i++){
-
-        custo += data.getDistance(v[i], v[i+1]);
-    }
-
-    return custo;
-}
-
-//construção:
-
-vector<InsertionInfo> calcularCustoInsercao(Solution& s, vector<int>& CL, Data& data) 
-{   
-    vector<InsertionInfo> custoInsercao((s.sequencia.size() - 1) * CL.size()); 
-    int l = 0;
-    for(int a = 0; a < s.sequencia.size() - 1; a++) {
-        int i = s.sequencia[a];
-        int j = s.sequencia[a + 1];
-        for (auto k : CL) {
-            custoInsercao[l].custo = data.getDistance(i,k) + data.getDistance(j,k) - data.getDistance(i,j); 
-            // Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i], subseq_matrix[k][k],data);
-            // Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j][s.sequencia.size()-1],data); 
-            // custoInsercao[l].custo = sigma_2.C;
-            custoInsercao[l].noInserido = k;
-            custoInsercao[l].arestaRemovida = a;
-            l++;
-        }
-    }
-    return custoInsercao;
-}
-
-void verifica_rep(int& num1, int& num2, int& num3, size_t& dimension){    // evitar repetições no RNG
-
-    while(num1 == num2 || num2 == num3 || num1 == num3){
-        if(num1 == num2){
-            num2 = 2 + (rand() % (dimension-1));
-        } else if(num1 == num3){
-            num3 = 2 + (rand() % (dimension-1));
-        } else if(num2 == num3){
-            num3 = 2 + (rand() % (dimension-1));
-        }
-    }
-}
-
-vector<int> escolher3NosAleatorios(Solution *s, size_t& dimension){
-
-    int sP_rand1, sP_rand2, sP_rand3; // nós aleatórios para a solução parcial
-
-    sP_rand1 = 2 + (rand() % (dimension-1)); // declaração dos nós aleatórios
-    sP_rand2 = 2 + (rand() % (dimension-1));
-    sP_rand3 = 2 + (rand() % (dimension-1));
-
-    verifica_rep(sP_rand1, sP_rand2, sP_rand3, dimension);
-
-    s->sequencia.insert(s->sequencia.begin() + 1, sP_rand1); // inserção dos nós na sequencia da solução parcial
-    s->sequencia.insert(s->sequencia.begin() + 2, sP_rand2);
-    s->sequencia.insert(s->sequencia.begin() + 3, sP_rand3);
-
-    return s->sequencia;
-}
-
-vector<int> nosRestantes(Solution *s, vector<int> *V){
-    int position [3];
-    for(int i=0; i < 3; i++){
-        auto it = find(V->begin(), V->end(), s->sequencia[i+1]); //busca pra ver as posições dos nós que ja estão na solução parcial
-
-        if(it != V->end()){
-            position[i] = distance(V->begin(), it);
-        } else{
-            position[i] = -1;
-        }
-
-        if(position[i] != -1){
-            V->erase(V->begin() + position[i]); //retirada dos nós que ja foram escolhidos
-        }
-    }
-    V->erase(V->begin());
-    return *V;
-}
+//Construção:
 
 Solution Construcao(Solution &s, Data& data)
-{
+{ 
     size_t dimension = data.getDimension();
-
-    vector<int> V = vector<int>(dimension);
+    
+    vector<int> CL = vector<int>(dimension);
     for(int i = 0; i < dimension; i++){
-        V[i] = i+1;
+        CL[i] = i+1;
     }
 
-    s.sequencia = escolher3NosAleatorios(&s, dimension);
-    vector<int> CL = nosRestantes(&s, &V);
-    
-    //cout << "\n";
+    CL.erase(CL.begin());
+
+    int r = 1;
 
     while(!CL.empty()) {
 
-        vector<InsertionInfo> custoInsercao = calcularCustoInsercao(s, CL, data);
+        vector<double> distCL (CL.size());
 
-        sort(custoInsercao.begin(),custoInsercao.end(), [](const InsertionInfo& x, const InsertionInfo& y){
-            return x.custo < y.custo;
-        }); // não entendi muito bem a comparação lambda em termos genéricos, mas eu sei o que ela faz aqui
+        for(int i = 0; i < distCL.size(); i++){
+            distCL[i] = data.getDistance(CL[i],r);
+        }
+
+        sort(distCL.begin(), distCL.end());
 
         double alpha = (double) rand() / RAND_MAX;
 
-        // int alpha_int = rand() % (26);
+        //alpha dentro do intervalo R = {0, 0.01, 0.02 ... 0.24, 0.25}
+        // int alpha_int = rand() % (26); 
         // double alpha = (double) alpha_int/100;
 
-        int selecionado = rand() % ((int) ceil(alpha * custoInsercao.size()));
+        int c = rand() % ((int) ceil(alpha * distCL.size()));
+        r = c;
 
-        s.sequencia.insert(s.sequencia.begin() + custoInsercao[selecionado].arestaRemovida + 1, custoInsercao[selecionado].noInserido); // o original só usava &s e custoIsercao e n tinha if
+        s.sequencia.push_back(CL[c]);
 
-        auto it = find(CL.begin(), CL.end(), custoInsercao[selecionado].noInserido);
+        auto it = find(CL.begin(), CL.end(), CL[c]);
         if (it != CL.end()) {
             CL.erase(it);
-        }   
+        }
     }
+    s.sequencia.push_back(1);
     return s;
 }
 
-//MLP
+//MLP:
 
 void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix, Data &data){
 
@@ -211,7 +133,7 @@ void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix, Da
     }
 }
 
-//improvement:
+//Improvement:
 
 bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     //double bestDelta = 0;
@@ -408,7 +330,7 @@ void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_mat
     }
 }
 
-//perturbação:
+//Perturbação:
 
 Solution Perturbação(Solution& best, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     Solution sPert = best;
@@ -468,29 +390,19 @@ int main(int argc, char** argv)
     Solution bestOfAll; // solução que será a melhor
     bestOfAll.valorObj = INFINITY;
 
-    // int maxIter = 50;
-    // int maxIterILS;
-
-    // if(data.getDimension() >= 150){
-    //     maxIterILS = (data.getDimension()) / 2;
-    // } else{
-    //     maxIterILS = data.getDimension();
-    // }
-
     int maxIter = 10;
     int maxIterILS = min(100, data.getDimension());
 
-    // // seed para os aleatórios
+    // seed para os aleatórios
     srand((unsigned) time(NULL));
 
     for(int i = 0; i < maxIter; i++){
-        Solution s = {{1,1}, 0};
+        Solution s = {{1}, 0};
         s = Construcao(s,data);
 
         vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
         UpdateAllSubseq(s, subseq_matrix, data);
 
-        //s.valorObj = calcularCusto(data, s.sequencia);
         s.valorObj = subseq_matrix[0][s.sequencia.size()-1].C;
 
         Solution best = s;
@@ -519,49 +431,6 @@ int main(int argc, char** argv)
     exibirSolucao(bestOfAll);
     cout << bestOfAll.valorObj << endl;
     cout << "Tempo de execução: " << duration.count() << endl;
-
-        //testes:
-
-        // Solution s = {{1,1}, 0};
-        // s = Construcao(s,data);
-
-        // exibirSolucao(s);
-
-        // vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
-        // UpdateAllSubseq(s, subseq_matrix, data);
-
-        // s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
-
-        // // for (int i = 0; i < s.sequencia.size(); i++){
-        // //     for (int j = 0; j < s.sequencia.size(); j++){
-        // //         cout << subseq_matrix[i][j].C << " ";
-        // //     }
-        // //     cout << "\n";
-        // // }
-
-        // cout << "\nValor OBj 1:" << s.valorObj << endl; 
-
-        // //bestImprovement2Opt(s,data,subseq_matrix);
-        // //bestImprovementSwap(s,data,subseq_matrix);
-        // // bestImprovementOrOpt(s,1,data,subseq_matrix);
-        // //UpdateAllSubseq(s, subseq_matrix, data);
-
-        // BuscaLocal(s,data,subseq_matrix);
-
-        // exibirSolucao(s);
-
-        // cout << "Valor OBJ pos improvment(teste): " << s.valorObj << endl;
-
-        // s.valorObj = subseq_matrix[0][s.sequencia.size() - 1].C;
-
-        // cout << "Valor OBJ pos improvment(real): " << s.valorObj << endl;
-
-        // // for (int i = 0; i < s.sequencia.size(); i++){
-        // //     for (int j = 0; j < s.sequencia.size(); j++){
-        // //         cout << subseq_matrix[i][j].C << " ";
-        // //     }
-        // //     cout << "\n";
-        // // }
 
     return 0;
 }
