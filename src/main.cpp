@@ -78,11 +78,12 @@ Solution Construcao(Solution &s, Data& data)
 
         sort(distCL.begin(), distCL.end());
 
-        double alpha = (double) rand() / RAND_MAX;
+        int alpha_int = rand() % (26); 
+        double alpha = (double) alpha_int/100;
 
-        //alpha dentro do intervalo R = {0, 0.01, 0.02 ... 0.24, 0.25}
-        // int alpha_int = rand() % (26); 
-        // double alpha = (double) alpha_int/100;
+        if (alpha == 0){
+            alpha = 0.000001;
+        }
 
         int c = rand() % ((int) ceil(alpha * distCL.size()));
         r = c;
