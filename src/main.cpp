@@ -70,13 +70,24 @@ Solution Construcao(Solution &s, Data& data)
 
     while(!CL.empty()) {
 
-        vector<double> distCL (CL.size());
+        vector<InsertionInfo> distCL (CL.size());
 
         for(int i = 0; i < distCL.size(); i++){
-            distCL[i] = data.getDistance(CL[i],r);
+            distCL[i].custo = data.getDistance(CL[i],r);
+            distCL[i].noInserido = CL[i];
         }
 
-        sort(distCL.begin(), distCL.end());
+        //sort(distCL.begin(), distCL.end());
+
+        sort(distCL.begin(),distCL.end(), [](const InsertionInfo& x, const InsertionInfo& y){
+            return x.custo < y.custo;
+        });
+
+        // for (int i = 0; i < distCL.size(); i++){
+        //     cout << "Custo: " << distCL[i].custo << " \n";
+        //     cout << "Inserido: " << distCL[i].noInserido << " \n";
+        // }
+        // cout << endl;
 
         int alpha_int = rand() % (26); 
         double alpha = (double) alpha_int/100;
@@ -86,13 +97,15 @@ Solution Construcao(Solution &s, Data& data)
         }
 
         int c = rand() % ((int) ceil(alpha * distCL.size()));
-        r = c;
+        r = CL[c];
 
-        s.sequencia.push_back(CL[c]);
+        s.sequencia.push_back(distCL[c].noInserido);
 
-        auto it = find(CL.begin(), CL.end(), CL[c]);
+        auto it = find(CL.begin(), CL.end(), distCL[c].noInserido);
         if (it != CL.end()) {
             CL.erase(it);
+        } else{
+            cout << "pinto";
         }
     }
     s.sequencia.push_back(1);
@@ -430,8 +443,26 @@ int main(int argc, char** argv)
     chrono::duration<double> duration = end - start;
 
     exibirSolucao(bestOfAll);
-    cout << bestOfAll.valorObj << endl;
+    cout << "Best(TESTE): " << bestOfAll.valorObj << endl;
     cout << "Tempo de execução: " << duration.count() << endl;
+
+    vector<vector<Subsequence>> subseq_matrix(bestOfAll.sequencia.size(), vector<Subsequence>(bestOfAll.sequencia.size()));
+
+    UpdateAllSubseq(bestOfAll, subseq_matrix, data);
+    bestOfAll.valorObj = subseq_matrix[0][bestOfAll.sequencia.size()-1].C;
+    cout << "Best(REAL): " << bestOfAll.valorObj << endl;
+
+        // Solution s = {{1,1}, 0};
+        // s = Construcao(s,data);
+
+        // exibirSolucao(s);
+
+        // vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
+        //     UpdateAllSubseq(s, subseq_matrix, data);
+
+        //     s.valorObj = subseq_matrix[0][s.sequencia.size()-1].C;
+
+        // cout << s.valorObj << endl;
 
     return 0;
 }
