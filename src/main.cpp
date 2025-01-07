@@ -104,8 +104,6 @@ Solution Construcao(Solution &s, Data& data)
         auto it = find(CL.begin(), CL.end(), distCL[c].noInserido);
         if (it != CL.end()) {
             CL.erase(it);
-        } else{
-            cout << "pinto";
         }
     }
     s.sequencia.push_back(1);
