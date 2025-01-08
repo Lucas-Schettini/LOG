@@ -104,8 +104,6 @@ Solution Construcao(Solution &s, Data& data)
         auto it = find(CL.begin(), CL.end(), distCL[c].noInserido);
         if (it != CL.end()) {
             CL.erase(it);
-        } else{
-            cout << "pinto";
         }
     }
     s.sequencia.push_back(1);
@@ -149,63 +147,35 @@ void UpdateAllSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix, Da
 
 void UpdateMovSubseq(Solution &s, vector<vector<Subsequence>> &subseq_matrix, Data &data, int best_i, int best_j){
 
-        for(int i = min(best_i,best_j); i < max(best_i,best_j); i++){
-            subseq_matrix[i][i].W = (i > 0);
-            subseq_matrix[i][i].C = 0;
-            subseq_matrix[i][i].T = 0;
-            subseq_matrix[i][i].first = s.sequencia[i];
-            subseq_matrix[i][i].last = s.sequencia[i];
-        }
+    int n = s.sequencia.size();
 
-        for(int i = 0; i < best_i - 1; i++){
-            for (int j = best_i; j < s.sequencia.size() - 1; j++){
-                subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j - 1], subseq_matrix[j][j], data);
-            }
-        }    
+    for(int i = min(best_i,best_j); i < max(best_i,best_j) + 1; i++){
+        subseq_matrix[i][i].W = (i > 0);
+        subseq_matrix[i][i].C = 0;
+        subseq_matrix[i][i].T = 0;
+        subseq_matrix[i][i].first = s.sequencia[i];
+        subseq_matrix[i][i].last = s.sequencia[i];
+    }
 
-        //return;
-
-        for(int i = best_i; i < best_j; i++){ 
-            for (int j = i + 1; j < s.sequencia.size() - 1; j++){
+    for (int i = 0; i < best_j + 1; ++i) {
+        for (int j = best_i; j < n; ++j) {
+            if (i == j || j < i){
+                continue;  
+            } else{
                 subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j - 1], subseq_matrix[j][j], data);
             }
         }
+    }
 
-        //return;
-
-        for (int i = best_j; i >= best_i + 1; i--){ // talvez esse +1 eh paia
-            for (int j = i - 1; j >= 0; j--){
-                subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j], data);
+    for (int i = n -1; i >= best_i; --i) {
+        for (int j = best_j; j >= 0; --j) {
+            if(i == j || j > i){
+                continue;
+            } else{
+                subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j], data);   
             }
         }
-
-        //return;
-
-        for (int i = s.sequencia.size() - 1; i >= 0; i--){
-            for (int j = best_j; j >= 0; j--){
-                subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j], data);
-            }
-        }
-
-        //return;
-
-        // for (int i = s.sequencia.size() - 1; i >= 0; i--){
-        //     for (int j = i - 1; j >= 0; j--){
-        //         subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j + 1], subseq_matrix[j][j], data);
-        //     }
-        // }
-
-        // for(int i = best_j - 1; i < s.sequencia.size() - 1; i++){
-        //     for (int j = 1; j < s.sequencia.size() - 1; j++){
-        //         subseq_matrix[i][j] = Subsequence::Concatenate(subseq_matrix[i][j - 1], subseq_matrix[j][j], data);
-        //     }
-        // }        
-
-        // subsequências invertidas (necessárias para o 2-opt)
-        // for (int i = max(best_i,best_j) - 2; i >= 0; i--){
-        //     subseq_matrix[best_i][i] = Subsequence::Concatenate(subseq_matrix[best_i][i + 1], subseq_matrix[i][i], data);
-        //     subseq_matrix[i][best_j] = Subsequence::Concatenate(subseq_matrix[i][best_j + 1], subseq_matrix[best_j][best_j], data);
-        // }
+    }
 }
 
 //Improvement:
@@ -249,28 +219,7 @@ bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &s
 
         s.valorObj = bestDelta;
 
-        // for(int i = 0; i < subseq_matrix.size(); i++){
-        //     cout << subseq_matrix[i][i].first << " ";   
-        // }
-
-        // cout << "\n-----------------------------------------------------------------------------\n";
-
-
         UpdateMovSubseq(s,subseq_matrix, data, best_i, best_j);
-
-        // for(int i = 0; i < subseq_matrix.size(); i++){
-        //     cout << subseq_matrix[i][i].first << " ";   
-        // }
-
-        // cout << "\n-----------------------------------------------------------------------------\n";
-
-        // cout << "asdasd";
-        
-        // UpdateAllSubseq(s,subseq_matrix,data);
-
-        // for(int i = 0; i < subseq_matrix.size(); i++){
-        //     cout << subseq_matrix[i][i].first << " ";   
-        // }
 
         return true;
     }
@@ -409,7 +358,6 @@ void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_mat
             break;
             case 2:
                 improved = bestImprovement2Opt(s, data, subseq_matrix);
-                //improved = false;
             break;
             case 3:
                 improved = bestImprovementOrOpt(s, 1, data, subseq_matrix); // Reinsertion
@@ -532,24 +480,11 @@ int main(int argc, char** argv)
     cout << "Best(TESTE): " << bestOfAll.valorObj << endl;
     cout << "Tempo de execução: " << duration.count() << endl;
 
-    vector<vector<Subsequence>> subseq_matrix(bestOfAll.sequencia.size(), vector<Subsequence>(bestOfAll.sequencia.size()));
+    // vector<vector<Subsequence>> subseq_matrix(bestOfAll.sequencia.size(), vector<Subsequence>(bestOfAll.sequencia.size()));
 
-    UpdateAllSubseq(bestOfAll, subseq_matrix, data);
-    bestOfAll.valorObj = subseq_matrix[0][bestOfAll.sequencia.size()-1].C;
-    cout << "Best(REAL): " << bestOfAll.valorObj << endl;
-
-        // Solution s = {{1}, 0};
-        // s = Construcao(s,data);
-
-        // vector<vector<Subsequence>> subseq_matrix (s.sequencia.size(), vector<Subsequence>(s.sequencia.size()));
-
-        // UpdateAllSubseq(s, subseq_matrix, data);
-
-        // s.valorObj = subseq_matrix[0][s.sequencia.size()-1].C;
-
-        // bestImprovementSwap(s,data,subseq_matrix);
-
-        // cout << s.valorObj << endl;
+    // UpdateAllSubseq(bestOfAll, subseq_matrix, data);
+    // bestOfAll.valorObj = subseq_matrix[0][bestOfAll.sequencia.size()-1].C;
+    // cout << "Best(REAL): " << bestOfAll.valorObj << endl;
 
     return 0;
 }
