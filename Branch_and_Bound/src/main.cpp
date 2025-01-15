@@ -28,7 +28,7 @@ vector<vector<int>> checkSubTour (hungarian_problem_t &p, Data *data){
 
 	for (int i = 0; i < data->getDimension(); ++i) {
         if (!visited[i]) {
-            std::vector<int> subtour;
+            vector<int> subtour;
             int current = i;
 
             do {
@@ -42,33 +42,51 @@ vector<vector<int>> checkSubTour (hungarian_problem_t &p, Data *data){
                     }
                 }
             } while (current != i); 
-
+			subtour.push_back(current + 1);
             all_subtours.push_back(subtour);
         }
     }
 
-	// int l = 0;
-	// for (int i = 0; i < data->getDimension(); i++){
+	sort(all_subtours.begin(), all_subtours.end(), [](const vector<int>& a, const vector<int>& b){
+		return a.size() < b.size();
+	});
 
-	// 	do{
-	// 		for(int j = l; j < data->getDimension(); j++){
-	// 			if(p.assignment[l][j] == 1){
-	// 				l = j;
-	// 				subtours.push_back(l);
-	// 			}
-	// 		}
-	// 	} while (l != subtours[0]);
+	cout << "Subtours: ";
+    for (const auto& i : all_subtours) {
+        cout << "{ ";
+        for (int node : i) {
+            cout << node << " ";
+        }
+        cout << "} ";
+    }
+    cout << endl;
 
-	// 	all_subtours.push_back(subtours);
-	// 	subtours.clear();		
-	// }
+	if(all_subtours.size() > 1){
+        cout << "Existe subtour" << endl;
+    } else{
+        cout << "Não existe subtour" << endl;
+    }
 
 	return all_subtours;
 }
 
-Node branchingStrategy(){
-	Node asdasd;
-	return asdasd;
+Node BreadthFirstSearch(list<Node> tree, Node root){
+
+}
+
+Node DepthFirstSearch(list<Node> tree, Node root){
+
+}
+
+Node LowerBoundSearch(list<Node> tree, Node root){
+
+}
+
+Node branchingStrategy(list<Node> tree, Node root){
+	//Node node = BreadthFirstSearch(tree, root);
+	Node node = DepthFirstSearch(tree, root);
+	//Node node = LowerBoundSearch(tree, root);
+	return node;
 }
 
 int main(int argc, char** argv) {
@@ -88,71 +106,81 @@ int main(int argc, char** argv) {
 	int mode = HUNGARIAN_MODE_MINIMIZE_COST;
 	hungarian_init(&p, cost, data->getDimension(), data->getDimension(), mode); // Carregando o problema
 
-	double obj_value = hungarian_solve(&p);
-	cout << "Obj. value: " << obj_value << endl;
+	//hungarian_solve(root); // resolver AP_TSP a partir da instancia original
 
-	cout << "Assignment" << endl;
-	hungarian_print_assignment(&p);
+	hungarian_solve(&p);
+	Node root; // no raiz
+	root.subtour = checkSubTour(p,data);
+	root.chosen = 0;
+	root.feasible = (root.subtour.size() > 1);
 
-	vector<vector<int>> subtours = checkSubTour(p,data);
+	/* criacao da arvore */
+	list<Node> tree;
+	tree.push_back(root);
 
-	std::cout << "Subtours: ";
-    for (const auto& i : subtours) {
-        std::cout << "{ ";
-        for (int node : i) {
-            std::cout << node << " ";
-        }
-        std::cout << "} ";
-    }
-    std::cout << std::endl;
+	// double upper_bound = numeric_limits<double>::infinity();
+	double upper_bound = 99999999;
+
+	while (!tree.empty())
+	{
+		auto node = branchingStrategy(tree, root); // escolher um dos nos da arvore
+		//vector<vector<int>> subtour = getSolutionHungarian(*node);
+
+		if (node.lower_bound > upper_bound)
+		{
+			// tree.erase(node);
+			auto it = find(tree.begin(), tree.end(), node);
+			if (it != tree.end()) {
+				tree.erase(it);
+			}
+			continue;
+		}
+
+		if (node.feasible){
+			upper_bound = min(upper_bound, node.lower_bound);
+			if(node.lower_bound < upper_bound){
+				
+			}
+		}else {
+			/* Adicionando os filhos */
+			for (int i = 0; i < node.subtour[root.chosen].size() - 1; i++) // iterar por todos os arcos do subtour escolhido
+			{
+				Node n;
+				n.forbidden_arcs = root.forbidden_arcs; 
+
+				pair<int, int> forbidden_arc = {
+					node.subtour[root.chosen][i],
+					node.subtour[root.chosen][i + 1]
+				};
+
+				n.forbidden_arcs.push_back(forbidden_arc);
+				tree.push_back(n); // inserir novos nos na arvore
+			}
+		}
+
+		// tree.erase(node);
+		auto it = find(tree.begin(), tree.end(), node);
+		if (it != tree.end()) {
+			tree.erase(it);
+		}
+	}
+
+	// hungarian_problem_t p;
+	// int mode = HUNGARIAN_MODE_MINIMIZE_COST;
+	// hungarian_init(&p, cost, data->getDimension(), data->getDimension(), mode); // Carregando o problema
+
+	// double obj_value = hungarian_solve(&p);
+	// cout << "Obj. value: " << obj_value << endl;
+
+	// cout << "Assignment" << endl;
+	// hungarian_print_assignment(&p);
+
+	// vector<vector<int>> subtours = checkSubTour(p,data);
 
 	hungarian_free(&p);
 	for (int i = 0; i < data->getDimension(); i++) delete [] cost[i];
 	delete [] cost;
 	delete data;
-
-	// Node root; // no raiz
-	// solve_hungarian(root); // resolver AP_TSP a partir da instancia original
-
-	/* criacao da arvore */
-	// list<Node> tree;
-	// tree.push_back(root);
-
-	// double upper_bound = numeric_limits<double>::infinity();
-
-	// while (!tree.empty())
-	// {
-	// 	auto node = branchingStrategy(); // escolher um dos nos da arvore
-	// 	//vector<vector<int>> subtour = getSolutionHungarian(*node);
-
-	// 	if (node.lower_bound > upper_bound)
-	// 	{
-	// 		//tree.erase(node);
-	// 		continue;
-	// 	}
-
-	// 	if (node.feasible)
-	// 		upper_bound = min(upper_bound, node.lower_bound);
-	// 	else
-	// 	{
-	// 		/* Adicionando os filhos */
-	// 		for (int i = 0; i < node.subtour[root.chosen].size() - 1; i++) // iterar por todos os arcos do subtour escolhido
-	// 		{
-	// 			Node n;
-	// 			//n.forbidden_arcs = raiz.forbidden_arcs;
-
-	// 			std::pair<int, int> forbidden_arc = {
-	// 				node.subtour[root.chosen][i],
-	// 				node.subtour[root.chosen][i + 1]
-	// 			};
-
-	// 			n.forbidden_arcs.push_back(forbidden_arc);
-	// 			tree.push_back(n); // inserir novos nos na arvore
-	// 		}
-	// 	}
-
-	// 	//tree.erase(node);
-	// }
 
 	return 0;
 }
