@@ -70,24 +70,31 @@ vector<vector<int>> checkSubTour (hungarian_problem_t &p, Data *data){
 	return all_subtours;
 }
 
-Node BreadthFirstSearch(list<Node> tree, Node root){
-
-}
+// Node BreadthFirstSearch(list<Node> tree, Node root){
+	
+// }
 
 Node DepthFirstSearch(list<Node> tree, Node root){
+	Node node;
+	static int current = 0;
 
-}
-
-Node LowerBoundSearch(list<Node> tree, Node root){
-
-}
-
-Node branchingStrategy(list<Node> tree, Node root){
-	//Node node = BreadthFirstSearch(tree, root);
-	Node node = DepthFirstSearch(tree, root);
-	//Node node = LowerBoundSearch(tree, root);
+	if(current == 0){
+		node = root;
+	}
+	current++;
 	return node;
 }
+
+// Node LowerBoundSearch(list<Node> tree, Node root){
+
+// }
+
+// Node branchingStrategy(list<Node> tree, Node root){
+// 	//Node node = BreadthFirstSearch(tree, root);
+// 	Node node = DepthFirstSearch(tree, root);
+// 	//Node node = LowerBoundSearch(tree, root);
+// 	return node;
+// }
 
 int main(int argc, char** argv) {
 
@@ -123,13 +130,14 @@ int main(int argc, char** argv) {
 
 	while (!tree.empty())
 	{
-		auto node = branchingStrategy(tree, root); // escolher um dos nos da arvore
+		// auto node = branchingStrategy(tree, root); // escolher um dos nos da arvore
+		auto node = DepthFirstSearch(tree,root);
 		//vector<vector<int>> subtour = getSolutionHungarian(*node);
 
 		if (node.lower_bound > upper_bound)
 		{
 			// tree.erase(node);
-			auto it = find(tree.begin(), tree.end(), node);
+			auto it = find(tree.begin(), tree.end(), node); // PROBLEMA AQUI
 			if (it != tree.end()) {
 				tree.erase(it);
 			}
@@ -138,9 +146,9 @@ int main(int argc, char** argv) {
 
 		if (node.feasible){
 			upper_bound = min(upper_bound, node.lower_bound);
-			if(node.lower_bound < upper_bound){
+			// if(node.lower_bound < upper_bound){
 				
-			}
+			// }
 		}else {
 			/* Adicionando os filhos */
 			for (int i = 0; i < node.subtour[root.chosen].size() - 1; i++) // iterar por todos os arcos do subtour escolhido
