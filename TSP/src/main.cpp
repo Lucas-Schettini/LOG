@@ -493,7 +493,7 @@ int main(int argc, char** argv)
         }
     }
 
-    //exibirSolucao(bestOfAll);
+    exibirSolucao(bestOfAll);
     cout << bestOfAll.valorObj << endl;
 
     return 0;
