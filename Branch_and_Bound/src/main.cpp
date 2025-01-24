@@ -7,6 +7,7 @@
 #include <limits>
 #include <list>
 #include <stack>
+#include <queue>
 #include <chrono>
 
 using namespace std;
@@ -55,7 +56,7 @@ vector<vector<int>> checkSubTour (hungarian_problem_t &p, Data *data){
 
 	// cout << "Subtours: ";
     // for (const auto& i : all_subtours) {
-    //     cout << "{ ";
+    //     cout << "{ "; 
     //     for (int node : i) {
     //         cout << node << " ";
     //     }
@@ -72,9 +73,18 @@ vector<vector<int>> checkSubTour (hungarian_problem_t &p, Data *data){
 	return all_subtours;
 }
 
-// Node BreadthFirstSearch(list<Node> tree, Node root){
-	
-// }
+Node BreadthFirstSearch(queue<Node>& tree){
+	Node node = tree.front();
+	tree.pop();
+
+	if(node.subtour.size() == 1){
+		node.feasible = true;
+	} else{
+		node.feasible = false;
+	}
+
+	return node;
+}
 
 Node DepthFirstSearch(stack<Node>& tree/*, Node& root, hungarian_problem_t &p, Data *data*/){
 	Node node = tree.top();
@@ -97,14 +107,11 @@ Node DepthFirstSearch(stack<Node>& tree/*, Node& root, hungarian_problem_t &p, D
 
 // }
 
-// Node branchingStrategy(list<Node> tree, Node root){
-// 	//Node node = BreadthFirstSearch(tree, root);
-// 	Node node = DepthFirstSearch(tree, root);
-// 	//Node node = LowerBoundSearch(tree, root);
-// 	return node;
-// }
-
 int main(int argc, char** argv) {
+	// int option;
+
+	// cout << "Input: (1 -> DFS | 2 -> BFS)";
+	// cin >> option;
 
 	auto start = chrono::high_resolution_clock::now();
 
@@ -123,8 +130,6 @@ int main(int argc, char** argv) {
 	int mode = HUNGARIAN_MODE_MINIMIZE_COST;
 	hungarian_init(&p, cost, data->getDimension(), data->getDimension(), mode); // Carregando o problema
 
-	//hungarian_solve(root); // resolver AP_TSP a partir da instancia original
-
 	int lower_bound = hungarian_solve(&p);
 	Node root; // no raiz
 	root.subtour = checkSubTour(p,data);
@@ -139,7 +144,8 @@ int main(int argc, char** argv) {
 
 	/* criacao da arvore */
 	// list<Node> tree;
-	stack<Node> tree;
+	// stack<Node> tree;
+	queue<Node> tree;
 	tree.push(root);
 
 	vector <int> solution (data->getDimension() + 1);
@@ -161,7 +167,8 @@ int main(int argc, char** argv) {
 		// 	break;
 		// }
 		
-		auto node = DepthFirstSearch(tree/*,root,p, data*/);
+		//auto node = DepthFirstSearch(tree/*,root,p, data*/);
+		auto node = BreadthFirstSearch(tree);
 
 		if (node.lower_bound > upper_bound)
 		{
@@ -212,7 +219,7 @@ int main(int argc, char** argv) {
 				n.subtour = checkSubTour(local_p,data);
 				n.chosen = 0;
 
-				//printar a matriz
+				// // printar a matriz
 				// for (int i = 0; i < data->getDimension(); i++){
 				// 	for(int j = 0; j < data->getDimension(); j++){
 				// 		cout << cost[i][j] << " ";
