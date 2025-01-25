@@ -103,15 +103,30 @@ Node DepthFirstSearch(stack<Node>& tree/*, Node& root, hungarian_problem_t &p, D
 	return node;
 }
 
-// Node LowerBoundSearch(list<Node> tree, Node root){
+struct Min_heap {
+    bool operator()(const Node& a, const Node& b) {
+        return a.lower_bound > b.lower_bound;
+    }
+};
 
-// }
+Node LowerBoundSearch(priority_queue<Node, vector <Node>, Min_heap>& tree){
+	Node node = tree.top();
+	tree.pop();
+
+	if(node.subtour.size() == 1){
+		node.feasible = true;
+	} else{
+		node.feasible = false;
+	}
+
+	return node;
+}
 
 int main(int argc, char** argv) {
-	// int option;
+	int option;
 
-	// cout << "Input: (1 -> DFS | 2 -> BFS)";
-	// cin >> option;
+	cout << "Input: (1 -> DFS | 2 -> BFS | 3 -> LBS)\n";
+	cin >> option;
 
 	auto start = chrono::high_resolution_clock::now();
 
@@ -131,22 +146,37 @@ int main(int argc, char** argv) {
 	hungarian_init(&p, cost, data->getDimension(), data->getDimension(), mode); // Carregando o problema
 
 	int lower_bound = hungarian_solve(&p);
+
 	Node root; // no raiz
+
 	root.subtour = checkSubTour(p,data);
 	root.chosen = 0;
+
 	if(root.subtour.size() == 1){
 		root.feasible = true;
 	} else {
 		root.feasible = false;
 	}
+
 	root.lower_bound = lower_bound;
 	root.forbidden_arcs = {};
 
 	/* criacao da arvore */
-	// list<Node> tree;
-	// stack<Node> tree;
-	queue<Node> tree;
-	tree.push(root);
+
+	stack<Node> tree_DFS;
+	queue<Node> tree_BFS;
+	priority_queue<Node, vector <Node>, Min_heap> tree_LBS;
+
+	switch (option) {
+		case 1:
+			tree_DFS.push(root);
+			break;
+		case 2:
+			tree_BFS.push(root);
+			break;
+		case 3:
+			tree_LBS.push(root);
+	}
 
 	vector <int> solution (data->getDimension() + 1);
 
@@ -161,14 +191,25 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	while (!tree.empty())
+	while (!tree_DFS.empty() || !tree_BFS.empty() || !tree_LBS.empty())
 	{
 		// if(count == 5){
 		// 	break;
 		// }
 		
-		//auto node = DepthFirstSearch(tree/*,root,p, data*/);
-		auto node = BreadthFirstSearch(tree);
+		Node node;
+
+		switch (option) {
+			case 1:
+				node = DepthFirstSearch(tree_DFS);
+				break;
+			case 2:
+				node = BreadthFirstSearch(tree_BFS);
+				break;
+			case 3:
+				node = LowerBoundSearch(tree_LBS);
+				break;
+		}
 
 		if (node.lower_bound > upper_bound)
 		{
@@ -184,7 +225,7 @@ int main(int argc, char** argv) {
 
 		}else {
 			/* Adicionando os filhos */
-			int ordem = tree.size();
+			// int ordem = tree.size();
 			for (int i = 0; i < node.subtour[node.chosen].size() - 1; i++) // iterar por todos os arcos do subtour escolhido
 			{
 				Node n;
@@ -229,7 +270,18 @@ int main(int argc, char** argv) {
 
 				if(n.subtour[0].size() != 2){
 					n.forbidden_arcs.push_back(forbidden_arc);
-					tree.push(n); // inserir novos nos na arvore
+
+					switch (option) { // inserir novos nos na arvore
+						case 1:
+							tree_DFS.push(n); 
+							break;
+						case 2:
+							tree_BFS.push(n);
+							break;
+						case 3:
+							tree_LBS.push(n);
+							break;
+					}
 				}
 				hungarian_free(&local_p);
 
