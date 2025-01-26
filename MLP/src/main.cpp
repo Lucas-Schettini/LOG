@@ -382,6 +382,7 @@ void BuscaLocal(Solution& s, Data& data, vector<vector<Subsequence>> &subseq_mat
 
 Solution Perturbação(Solution& best, Data& data, vector<vector<Subsequence>> &subseq_matrix){
     Solution sPert = best;
+    int n = best.sequencia.size() -1;
 
     int segSize_1 = 2 + rand() % ((best.sequencia.size() - 1)/10);
     int segSize_2 = 2 + rand() % ((best.sequencia.size() - 1)/10);
@@ -412,18 +413,32 @@ Solution Perturbação(Solution& best, Data& data, vector<vector<Subsequence>> &
 
         sPert.sequencia.insert(sPert.sequencia.begin() + segStart_2, seg1.begin(), seg1.end());
         sPert.sequencia.insert(sPert.sequencia.begin() + segStart_1 + dif, seg2.begin(), seg2.end());
-        
+
+        Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][segStart_2-1], subseq_matrix[segStart_2][segStart_2+segSize_2-1], data);
+        Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[segStart_2+segSize_2][segStart_1-1], data);
+        Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[segStart_1][segStart_1+segSize_1-1], data);
+        Subsequence sigma_4 = Subsequence::Concatenate(sigma_3, subseq_matrix[segStart_1+segSize_1][n], data);
+        sPert.valorObj = sigma_4.C;
+
     } else{
         sPert.sequencia.erase(sPert.sequencia.begin() + segStart_2, sPert.sequencia.begin() + segStart_2 + segSize_2);
         sPert.sequencia.erase(sPert.sequencia.begin() + segStart_1, sPert.sequencia.begin() + segStart_1 + segSize_1);
 
         sPert.sequencia.insert(sPert.sequencia.begin() + segStart_1, seg2.begin(), seg2.end());
         sPert.sequencia.insert(sPert.sequencia.begin() + segStart_2 - dif, seg1.begin(), seg1.end());
+
+        Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][segStart_1-1], subseq_matrix[segStart_1][segStart_1+segSize_1-1], data);
+        Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[segStart_1+segSize_1][segStart_2-1], data);
+        Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[segStart_2][segStart_2+segSize_2-1], data);
+        Subsequence sigma_4 = Subsequence::Concatenate(sigma_3, subseq_matrix[segStart_2+segSize_2][n], data);
+        sPert.valorObj = sigma_4.C;
     }
         
     UpdateAllSubseq(sPert,subseq_matrix,data);
 
-    sPert.valorObj = subseq_matrix[0][sPert.sequencia.size() - 1].C;
+    //UpdateMovSubseq(sPert,subseq_matrix,data,segStart_1,segStart_2);
+
+    //sPert.valorObj = subseq_matrix[0][sPert.sequencia.size() - 1].C;
 
     return sPert;
 }

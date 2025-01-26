@@ -1,1 +1,2 @@
-obj/main.o: src/main.cpp src/data.h src/hungarian.h
+-MM
+src/main.cpp
