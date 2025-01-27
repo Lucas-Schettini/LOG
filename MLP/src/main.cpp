@@ -89,8 +89,10 @@ Solution Construcao(Solution &s, Data& data)
         // }
         // cout << endl;
 
-        int alpha_int = rand() % (26); 
-        double alpha = (double) alpha_int/100;
+        // int alpha_int = rand() % (26); 
+        // double alpha = (double) alpha_int/100;
+
+        double alpha = (double) rand() / RAND_MAX;
 
         if (alpha == 0){
             alpha = 0.000001;
@@ -436,8 +438,6 @@ Solution Perturbação(Solution& best, Data& data, vector<vector<Subsequence>> &
         
     UpdateAllSubseq(sPert,subseq_matrix,data);
 
-    //UpdateMovSubseq(sPert,subseq_matrix,data,segStart_1,segStart_2);
-
     //sPert.valorObj = subseq_matrix[0][sPert.sequencia.size() - 1].C;
 
     return sPert;
@@ -453,7 +453,15 @@ int main(int argc, char** argv)
     Solution bestOfAll; // solução que será a melhor
     bestOfAll.valorObj = INFINITY;
 
-    int maxIter = 10;
+    //int maxIter = 10;
+
+    int maxIter; /*opção para melhorar os valores, mas compromete o tempo*/ 
+    if(data.getDimension() > 90){
+        maxIter = 35;    
+    } else{
+        maxIter = 10;
+    }
+    
     int maxIterILS = min(100, data.getDimension());
 
     // seed para os aleatórios
