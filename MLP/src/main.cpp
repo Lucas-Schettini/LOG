@@ -7,6 +7,7 @@
 #include <algorithm> 
 #include <limits>
 #include <chrono>
+#include <iomanip>
 
 using namespace std;
 
@@ -89,10 +90,10 @@ Solution Construcao(Solution &s, Data& data)
         // }
         // cout << endl;
 
-        // int alpha_int = rand() % (26); 
-        // double alpha = (double) alpha_int/100;
+        int alpha_int = rand() % (26); 
+        double alpha = (double) alpha_int/100;
 
-        double alpha = (double) rand() / RAND_MAX;
+        // double alpha = (double) rand() / RAND_MAX;
 
         if (alpha == 0){
             alpha = 0.000001;
@@ -191,26 +192,33 @@ bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &s
 
     for(int i = 1; i < s.sequencia.size() - 1; i++)
     {
-
+ 
         for(int j = i + 1; j < s.sequencia.size() - 1; j++)
         {
             if(i==j){
                 continue;
             }
 
-            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][j], data);
-            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i+1][j-1], data);
-            Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[i][i], data);
-            Subsequence sigma_4 = Subsequence::Concatenate(sigma_3, subseq_matrix[j+1][s.sequencia.size()-1], data);
+            // Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][j], data);
+            // Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i+1][j-1], data);
+            // Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[i][i], data);
+            // Subsequence sigma = Subsequence::Concatenate(sigma_3, subseq_matrix[j+1][s.sequencia.size()-1], data);
+
+            Subsequence sigma = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[j][j], data);
+
+            if(j != i+1){ 
+                sigma = Subsequence::Concatenate(sigma, subseq_matrix[i+1][j-1], data);
+            }
+
+            sigma = Subsequence::Concatenate(sigma, subseq_matrix[i][i], data);
+            sigma = Subsequence::Concatenate(sigma, subseq_matrix[j+1][s.sequencia.size()-1], data);
 
             //cout << "Sigma2: " << sigma_2.C << endl; 
 
-            if(sigma_4.C < s.valorObj || sigma_4.C < bestDelta){
-                if(sigma_4.C < bestDelta){
-                    bestDelta = sigma_4.C;
-                    best_i = i;
-                    best_j = j;
-                }
+            if(sigma.C < bestDelta){
+                bestDelta = sigma.C;
+                best_i = i;
+                best_j = j;
             }
         }
     }
@@ -222,6 +230,10 @@ bool bestImprovementSwap(Solution& s, Data& data, vector<vector<Subsequence>> &s
         s.valorObj = bestDelta;
 
         UpdateMovSubseq(s,subseq_matrix, data, best_i, best_j);
+
+        // if(subseq_matrix[0][s.sequencia.size() - 1].C != s.valorObj){
+        //     cout << "ERRO!" << endl;
+        // } 
 
         return true;
     }
@@ -258,8 +270,11 @@ bool bestImprovement2Opt(Solution& s, Data& data, vector<vector<Subsequence>> &s
 
     if(bestDelta < s.valorObj){
         //cout << "best_i: " << best_i << " best_j: " << best_j<< endl;
-        swap(s.sequencia[best_i], s.sequencia[best_j]);
-        reverse(s.sequencia.begin() + best_i + 1, s.sequencia.begin() + best_j);
+
+        // swap(s.sequencia[best_i], s.sequencia[best_j]);
+        // reverse(s.sequencia.begin() + best_i + 1, s.sequencia.begin() + best_j);
+
+        reverse(s.sequencia.begin() + best_i, s.sequencia.begin() + best_j + 1);
 
         //s.valorObj = s.valorObj + bestDelta;
 
@@ -279,23 +294,33 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data, vector<vector<Subsequ
     double bestDelta = s.valorObj;
     int best_i, best_j;
     //double delta = 0;
+    Subsequence sigma_3;
 
     int n = s.sequencia.size() -1;
 
-    for (int i = 1; i < s.sequencia.size() - 1 - id; i++){
+    for (int i = 1; i + id < s.sequencia.size() - 1 - id; i++){
         for(int j = 1; j < s.sequencia.size() - 1; j++){
 
-            if (j >= i && j <= i + id - 1){
+            if (j >= i && j <= i + id){
                 continue;
             }
 
-            if(j == i-1 || j == i){
-                continue;
-            }
+            // if(j == i-1 || j == i){
+            //     continue;
+            // }
 
-            Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[i+id][j], data);
-            Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i][i+id-1], data);
-            Subsequence sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[j+1][n], data);
+            if(j < i){
+                Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][j-1], subseq_matrix[i][i+(id-1)], data);
+                Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[j][i-1], data);
+                sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[i+id][s.sequencia.size()-1], data);
+            } else{
+                Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[i+id][j-1], data);
+                Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i][i+(id-1)], data);
+                sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[j][s.sequencia.size()-1], data);
+            }
+            // Subsequence sigma_1 = Subsequence::Concatenate(subseq_matrix[0][i-1], subseq_matrix[i+id][j], data);
+            // Subsequence sigma_2 = Subsequence::Concatenate(sigma_1, subseq_matrix[i][i+id-1], data);
+            // sigma_3 = Subsequence::Concatenate(sigma_2, subseq_matrix[j+1][n], data);
 
             //cout << "teste: " << sigma_3.C << endl;
 
@@ -312,33 +337,53 @@ bool bestImprovementOrOpt(Solution& s, int id, Data& data, vector<vector<Subsequ
     }
 
     if(bestDelta < s.valorObj){
-        if(id == 1){
-            s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
-            if(best_i > best_j){
-                s.sequencia.erase(s.sequencia.begin() + best_i + 1);
-            } else{
-                s.sequencia.erase(s.sequencia.begin() + best_i);                
-            }
+        // if(id == 1){
+        //     s.sequencia.insert(s.sequencia.begin() + best_j + 1, s.sequencia[best_i]);
+        //     if(best_i > best_j){
+        //         s.sequencia.erase(s.sequencia.begin() + best_i + 1);
+        //     } else{
+        //         s.sequencia.erase(s.sequencia.begin() + best_i);                
+        //     }
 
 
-        } else{
-            auto start_it = s.sequencia.begin() + best_i;
-            auto end_it = start_it + id;
-            vector <int> bloco (s.sequencia.begin() + best_i, s.sequencia.begin() + best_i + id);
+        // } else{
+        //     auto start_it = s.sequencia.begin() + best_i;
+        //     auto end_it = start_it + id;
+        //     vector <int> bloco (s.sequencia.begin() + best_i, s.sequencia.begin() + best_i + id);
 
-            if(best_i > best_j){
-                s.sequencia.erase(start_it, end_it);
-                s.sequencia.insert(s.sequencia.begin() + best_j + 1, bloco.begin(), bloco.end());
+        //     if(best_i > best_j){
+        //         s.sequencia.erase(start_it, end_it);
+        //         s.sequencia.insert(s.sequencia.begin() + best_j + 1, bloco.begin(), bloco.end());
 
-            } else{
-                s.sequencia.erase(start_it, end_it);
-                s.sequencia.insert(s.sequencia.begin() + best_j + 1 - id, bloco.begin(), bloco.end());
-            }
+        //     } else{
+        //         s.sequencia.erase(start_it, end_it);
+        //         s.sequencia.insert(s.sequencia.begin() + best_j + 1 - id, bloco.begin(), bloco.end());
+        //     }
 
+        // }
+        if (best_j < best_i)
+        {
+            rotate(
+                s.sequencia.begin() + best_j,
+                s.sequencia.begin() + best_i,
+                s.sequencia.begin() + best_i + id
+            );
+        }
+        else
+        {
+            rotate(
+                s.sequencia.begin() + best_i,
+                s.sequencia.begin() + best_i + id,
+                s.sequencia.begin() + best_j
+            );
         }
         s.valorObj = bestDelta;
-        //UpdateAllSubseq(s,subseq_matrix,data);
-        UpdateMovSubseq(s,subseq_matrix, data, best_i, best_j);
+        UpdateAllSubseq(s,subseq_matrix,data);
+        //UpdateMovSubseq(s,subseq_matrix, data, best_i, best_j);
+
+        // if(subseq_matrix[0][s.sequencia.size() - 1].C != s.valorObj){
+        //     cout << "ERRO OR-OPT!" << endl;
+        // } 
 
         return true;
     }
@@ -455,12 +500,12 @@ int main(int argc, char** argv)
 
     //int maxIter = 10;
 
-    int maxIter; /*opção para melhorar os valores, mas compromete o tempo*/ 
-    if(data.getDimension() > 90){
-        maxIter = 35;    
-    } else{
-        maxIter = 10;
-    }
+    int maxIter = 10; /*opção para melhorar os valores, mas compromete o tempo*/ 
+    // if(data.getDimension() > 90){
+    //     maxIter = 35;    
+    // } else{
+    //     maxIter = 10;
+    // }
     
     int maxIterILS = min(100, data.getDimension());
 
@@ -500,6 +545,7 @@ int main(int argc, char** argv)
     chrono::duration<double> duration = end - start;
 
     exibirSolucao(bestOfAll);
+    //cout << "Best(TESTE): " << fixed << setprecision(0) << bestOfAll.valorObj << endl;
     cout << "Best(TESTE): " << bestOfAll.valorObj << endl;
     cout << "Tempo de execução: " << duration.count() << endl;
 
