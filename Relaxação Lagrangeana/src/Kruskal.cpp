@@ -59,6 +59,8 @@ double Kruskal::MST(int nodes, vector<vector<double>>& dist_mtx){
         conn_0.push_back({cost_0, j});
     }
 
+	sort(conn_0.begin(), conn_0.end());
+
     for(int i = 0; i < 2; ++i) {
         int v = conn_0[i].second;
         edges.push_back({0, v});
