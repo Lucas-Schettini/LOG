@@ -1,6 +1,7 @@
 #include "Kruskal.h"
 #include "Data.h"
 #include "TSP.h"
+#include "BnB.h"
 #include <numeric>
 #include <chrono>
 
@@ -12,27 +13,23 @@
 //                                    {0, 0, 0, 0, 0}};
 // vector<vector<double>> base_mtx = dist_mtx;
 
-typedef struct{
-	vector<pair<int, int>> forbidden_arcs; // lista de arcos proibidos do nó
-	// vector<vector<int>> subtour; // conjunto de subtours da solucao
-    int grau;
-	double lower_bound; // custo total da solucao do algoritmo 
-	int chosen; // indice do menor grau
-	bool feasible; // indica se a solucao do e viavel
-} Node;
-
-vector<int> CheckGrau(vii edges){
-    //cout << "Solução: " << endl;
-    vector<int> deg(edges.size(),0);
-    for(auto &e : edges){
-        //cout << "(" << e.first << e.second << ")" << endl; 
-        int u = e.first;
-        int v = e.second;
-        deg[u]++;
-        deg[v]++;
-    }
-    return deg;
-}
+// vector<int> CheckGrau(vii edges){
+//     //cout << "Solução: " << endl;
+//     vector<int> deg(edges.size(),0);
+//     for(auto &e : edges){
+//         //cout << "(" << e.first << e.second << ")" << endl; 
+//         int u = e.first;
+//         int v = e.second;
+//         deg[u]++;
+//         deg[v]++;
+//     }
+//     return deg;
+// }
+struct LagrangeDual{
+    vii edges;
+    double cost;
+    vector<double> vec_pen;
+};
 
 void UpdateDistances(vector<double>& vec_pen, double fator_passo, vector<double>& subgrad, 
                      vector<vector<double>>& dist_mtx, vector<vector<double>>& base_mtx){
@@ -74,8 +71,8 @@ void printDistanceMatrixLiteral(vector<vector<double>>& dist_mtx) {
     cout << "}" << endl;
 }
 
-pair<vii, vector<double>> SolveLagrangianDual(vector<vector<double>>& dist_mtx, vector<vector<double>>& base_mtx,
-                                              double UB){
+LagrangeDual SolveLagrangianDual(vector<vector<double>>& dist_mtx, vector<vector<double>>& base_mtx,
+                                              double UB, bool debug){
     int n = dist_mtx[0].size();
     vector<double> vec_pen(n, 0);
     vector<double> best_pen = vec_pen;
@@ -89,7 +86,7 @@ pair<vii, vector<double>> SolveLagrangianDual(vector<vector<double>>& dist_mtx, 
     int k_max = 30;
     //double UB = 0;
 
-    vii edges_MST;
+    vii edges_MST, edges_dual;
     int counter = 0;
 
     while(!stop){
@@ -130,6 +127,7 @@ pair<vii, vector<double>> SolveLagrangianDual(vector<vector<double>>& dist_mtx, 
         if(w > best_w){
             best_w = w;
             best_pen = vec_pen;
+            edges_dual = edges_MST;
             k = 0;
         } else{
             k++;
@@ -150,6 +148,9 @@ pair<vii, vector<double>> SolveLagrangianDual(vector<vector<double>>& dist_mtx, 
         //      << "(" << kruskal_cost << ", " << /*lambdaSubgrad<<*/ ")"<< endl << denom << endl;
         
         UpdateDistances(vec_pen,fator_passo,subgrad, dist_mtx, base_mtx);
+        if(debug){
+            printDistanceMatrixLiteral(dist_mtx); 
+        }
         //printDistanceMatrixLiteral(dist_mtx); 
 
         if(epsilon < epsilon_min || w >= UB){
@@ -162,9 +163,189 @@ pair<vii, vector<double>> SolveLagrangianDual(vector<vector<double>>& dist_mtx, 
         // }
     }
 
-    pair<vii, vector<double>> lagrangianDual = make_pair(edges_MST,vec_pen);
-    
+    LagrangeDual lagrangianDual;
+    lagrangianDual.edges = edges_dual;
+    lagrangianDual.cost = best_w; //NÃO TENHO CERTEZA SE ESTÁ CORRETO
+    //Kruskal kruskal = Kruskal(dist_mtx);
+    //lagrangianDual.cost = kruskal.MST(n,dist_mtx);
+    lagrangianDual.vec_pen = best_pen;
+
     return lagrangianDual;
+}
+
+vector<int> GetConnectedVertices(int n, vii& edges) {
+    vector<int> connected;
+
+    for (auto& edge : edges) {
+        if (edge.first == n) {
+            connected.push_back(edge.second);
+        } else if (edge.second == n) {
+            connected.push_back(edge.first);
+        }
+    }
+
+    return connected;
+}
+
+pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vector<vector<double>> dist_mtx,
+                      double UB_lagrange){
+    pair<double, vii> bnb_solution;
+
+    stack<Node> tree_DFS;
+	queue<Node> tree_BFS;
+	priority_queue<Node, vector <Node>, Min_heap> tree_LBS;
+
+    double upper_bound = numeric_limits<double>::infinity();
+
+    vii solution (data.getDimension() + 1);
+
+    //auto local_mtx = dist_mtx;
+
+	switch (option) {
+		case 1:
+			tree_DFS.push(root);
+			break;
+		case 2:
+			tree_BFS.push(root);
+			break;
+		case 3:
+			tree_LBS.push(root);
+	}
+    while (!tree_DFS.empty() || !tree_BFS.empty() || !tree_LBS.empty()) {
+        // if(count == 5){
+        // 	break;
+        // }
+        
+        Node node;
+
+        switch (option) {
+            case 1:
+                node = DepthFirstSearch(tree_DFS);
+                break;
+            case 2:
+                node = BreadthFirstSearch(tree_BFS);
+                //cout << "Usei a estratégia\n";
+                break;
+            case 3:
+                node = LowerBoundSearch(tree_LBS);
+                break;
+        }
+
+        if (node.lower_bound > upper_bound)
+        {
+            continue;
+        }
+
+        if (node.feasible){
+            cout << "opa é viavel\n";
+
+            if(node.edges.empty()){
+                cout << "vazio\n";
+            }
+
+            for(auto aresta : node.edges){
+                cout << "(" << aresta.first << "," << aresta.second << ")\n";
+            }
+
+            if(node.lower_bound < upper_bound){
+                upper_bound = node.lower_bound;
+                solution = node.edges;
+            }
+        }else {
+            /* Adicionando os filhos */
+            //int ordem = tree_BFS.size();
+            //cout << "Grau do escolhido: " << node.grau[node.chosen] << endl;
+            //cout << "Escolhido: " << node.chosen << endl;
+            vector<int> connected = GetConnectedVertices(node.chosen, node.edges);
+            //cout << "conectei\n";
+            if(node.grau.empty()){
+                cout << "vetor vazio\n";
+            }
+            for (int i = 0; i < node.grau[node.chosen]; i++){
+                auto local_mtx = dist_mtx;
+                int ordem = tree_DFS.size();
+                Node n;
+                n.forbidden_arcs = node.forbidden_arcs; 
+
+                // for(auto vertice : connected){
+                //     cout << vertice << endl;
+                // }
+
+                // pair<int, int> forbidden_arc = {
+                //     node.edges[node.chosen].first,
+                //     node.edges[node.chosen].second
+                // };
+
+                pair<int, int> forbidden_arc = {
+                    node.chosen,
+                    connected[i]
+                };
+
+                // cout << "arco ruim i:"<< forbidden_arc.first <<" j: "<< forbidden_arc.second << endl;
+                // cout << "(" << ordem << ")" <<endl;
+
+                local_mtx[forbidden_arc.first][forbidden_arc.second] = 9999999;
+                local_mtx[forbidden_arc.second][forbidden_arc.first] = 9999999;
+
+                for(int i = 0; i < n.forbidden_arcs.size(); i++){
+					local_mtx[n.forbidden_arcs[i].first][n.forbidden_arcs[i].second] = 9999999;
+                    local_mtx[n.forbidden_arcs[i].second][n.forbidden_arcs[i].first] = 9999999;
+				}
+
+                //printDistanceMatrixLiteral(local_mtx);
+
+                // for(int i = 0; i < n.forbidden_arcs.size(); i++){
+                //     local_mtx[n.forbidden_arcs[i].first-1][n.forbidden_arcs[i].second-1] = 99999999;
+                // }
+
+                LagrangeDual local_dual = SolveLagrangianDual(local_mtx, dist_mtx, UB_lagrange, false);
+                
+                n.lower_bound = local_dual.cost;
+                //cout << "Custo Interno do Dual: " << n.lower_bound << endl;
+                n.edges = local_dual.edges;
+                if(n.edges.empty()){
+                    cout << "ERRO!\n";
+                    //printDistanceMatrixLiteral(local_mtx);
+                    return make_pair(upper_bound,solution);
+                }
+
+                vector<int> deg = CheckGrau(n.edges);
+                n.chosen = distance(deg.begin(), max_element(deg.begin(), deg.end())); // maior grau
+
+                if(!CheckFeasible(CheckGrau(n.edges))){
+                    n.forbidden_arcs.push_back(forbidden_arc);
+
+                    switch (option) { // inserir novos nos na arvore
+                        case 1:
+                            tree_DFS.push(n);
+                            //cout << "entrei\n"; 
+                            break;
+                        case 2:
+                            tree_BFS.push(n);
+                            // cout << "entrei\n";
+                            break;
+                        case 3:
+                            tree_LBS.push(n);
+                            break;
+                    }
+                }
+                //local_mtx[forbidden_arc.first-1][forbidden_arc.second-1] = 99999999;
+                //local_mtx[forbidden_arc.second-1][forbidden_arc.first-1] = 99999999;
+                //printDistanceMatrixLiteral(local_mtx);
+
+                // for (const auto& aresta : n.edges) {
+                //     cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+                // }
+
+                //break; //TESETR
+            }
+        }
+        //break; //TESTE
+    }
+
+    bnb_solution = make_pair(upper_bound,solution);
+    
+    return bnb_solution;
 }
 
 int main(int argc, char** argv){
@@ -192,11 +373,39 @@ int main(int argc, char** argv){
 
     vector<vector<double>> base_mtx = dist_mtx;
 
-    pair<vii, vector<double>> lagrangianDual = SolveLagrangianDual(dist_mtx, base_mtx, UB_lagrange);
+    LagrangeDual lagrangianDual = SolveLagrangianDual(dist_mtx, base_mtx, UB_lagrange, false);
 
-    for (const auto& aresta : lagrangianDual.first) {
+    // cout << "Antes: \n"; 
+
+    for (const auto& aresta : lagrangianDual.edges) {
         cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
     }
+
+    int lower_bound = lagrangianDual.cost;
+    cout << "Custo Inicial: " << lower_bound << endl;
+
+    //printDistanceMatrixLiteral(dist_mtx);
+
+    Node root;
+    root.lower_bound = lower_bound;
+    root.edges = lagrangianDual.edges;
+    root.grau = CheckGrau(root.edges);
+    root.chosen = distance(root.grau.begin(), max_element(root.grau.begin(), root.grau.end()));
+
+    // for (auto grau: root.grau){
+    //     cout << grau << endl;
+    // }
+    // cout << "Escolhido: " << root.chosen << endl;
+
+    pair<double, vii> bnb_solution = BnB(root, 1, lower_bound, data, base_mtx, UB_lagrange); //refletir se é base ou a dist
+
+    // cout << "Depois: \n"; 
+
+    // for (const auto& aresta : bnb_solution.second) {
+    //     cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+    // }
+
+    //cout << "Custo Final: " << bnb_solution.first << endl;
 
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;

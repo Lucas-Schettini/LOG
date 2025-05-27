@@ -1,9 +1,11 @@
 #include "Kruskal.h"
 
 Kruskal::Kruskal(vvi dist){
-	for(int i = 0; i < dist.size(); ++i){
-		for(int j = 0; j < dist[i].size(); ++j){
-			graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
+	for(int i = 1; i < dist.size(); ++i){
+		for(int j = 1; j < dist[i].size(); ++j){
+			if(i != j){
+				graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
+			}
 		}	
 	}
 }
