@@ -4,6 +4,8 @@
 #include "BnB.h"
 #include <numeric>
 #include <chrono>
+#include <iomanip>
+#include <set>
 
 //Dados:
 // vector<vector<double>> dist_mtx = {{0, 30, 26, 50, 40}, 
@@ -47,26 +49,33 @@ void UpdateDistances(vector<double>& vec_pen, double fator_passo, vector<double>
 
     for(int i = 0; i < dist_mtx[0].size(); i++){ //atualiza a matriz
         for(int j = i+1; j < dist_mtx[0].size(); j++){
-            dist_mtx[i][j] = base_mtx[i][j] - (vec_pen[i] + vec_pen[j]) /*+ 
+            if((base_mtx[i][j] - (vec_pen[i] + vec_pen[j])) < 0){
+                //dist_mtx[i][j] = 999999;
+            } else{
+                dist_mtx[i][j] = base_mtx[i][j] - (vec_pen[i] + vec_pen[j]) /*+ 
                              2 * accumulate(vec_pen.begin(), vec_pen.end(), 0.0)*/;
+                //cout << "[" << vec_pen[i] << ", " << vec_pen[j] << "] "; 
+            }
         }
+        //cout << endl;
     }
 
 }
 
-void printDistanceMatrixLiteral(vector<vector<double>>& dist_mtx) {
+
+void printDistanceMatrixLiteral(const vector<vector<double>>& dist_mtx) {
     cout << "{" << endl;
     for (int i = 0; i < dist_mtx.size(); ++i) {
         cout << "    {";
         for (int j = 0; j < dist_mtx[i].size(); ++j) {
-            cout << static_cast<int>(dist_mtx[i][j]);
+            // imprime o double com, digamos, 2 casas decimais:
+            cout << fixed << setprecision(2) << dist_mtx[i][j];
             if (j < dist_mtx[i].size() - 1)
                 cout << ", ";
         }
         cout << "}";
-        if (i < dist_mtx.size() - 1)
-            cout << ",";
-        cout << endl;
+        if (i < dist_mtx.size() - 1) cout << ",";
+        cout << "\n";
     }
     cout << "}" << endl;
 }
@@ -94,6 +103,10 @@ LagrangeDual SolveLagrangianDual(vector<vector<double>>& dist_mtx, vector<vector
         kruskal_cost = kruskal.MST(n,dist_mtx);
         //cout << "Custo: " << kruskal_cost << endl;
         edges_MST = kruskal.getEdges();
+        // cout << "Solução: \n";
+        // for (const auto& aresta : edges_MST) {
+        //     cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+        // }
 
         vector<int> deg = CheckGrau(edges_MST);
 
@@ -124,6 +137,16 @@ LagrangeDual SolveLagrangianDual(vector<vector<double>>& dist_mtx, vector<vector
 
         w = kruskal_cost + 2 * accumulate(vec_pen.begin(), vec_pen.end(), 0.0);
 
+        //cout << "W: " << w << endl;
+
+        // if(CheckFeasible(deg)){
+        //     best_w = w;
+        //     best_pen = vec_pen;
+        //     edges_dual = edges_MST;
+
+        //     break;
+        // }
+
         if(w > best_w){
             best_w = w;
             best_pen = vec_pen;
@@ -138,22 +161,29 @@ LagrangeDual SolveLagrangianDual(vector<vector<double>>& dist_mtx, vector<vector
         }
 
         double denom = 0;
+        bool condition;
 
         for(int i = 0; i < subgrad.size(); i++){
             denom += subgrad[i] * subgrad[i];
         }
-        fator_passo = epsilon*(UB - w)/denom;
+        if(denom == 0){
+            condition = true;
+            cout << "Entrei na situação\n";
+        } else{
+            fator_passo = epsilon*(UB - w)/denom;
+            UpdateDistances(vec_pen,fator_passo,subgrad, dist_mtx, base_mtx);
+        }
         // cout << "Fator passo: " << fator_passo << endl;
         // cout << "Dados em ordem: " << epsilon << endl << UB << endl << w
         //      << "(" << kruskal_cost << ", " << /*lambdaSubgrad<<*/ ")"<< endl << denom << endl;
         
-        UpdateDistances(vec_pen,fator_passo,subgrad, dist_mtx, base_mtx);
         if(debug){
             printDistanceMatrixLiteral(dist_mtx); 
-        }
-        //printDistanceMatrixLiteral(dist_mtx); 
+        } 
 
-        if(epsilon < epsilon_min || w >= UB){
+        //condition = (CheckFeasible(CheckGrau(edges_MST)) && (accumulate(vec_pen.begin(), vec_pen.end(), 0.0) == 0));
+
+        if(epsilon < epsilon_min || w >= UB || condition){ // TALVEZ SEJA NECESSÁRIA AQUELA CONDIÇÃO RARA
             stop = true;
         }
 
@@ -187,8 +217,8 @@ vector<int> GetConnectedVertices(int n, vii& edges) {
     return connected;
 }
 
-pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vector<vector<double>> dist_mtx,
-                      double UB_lagrange){
+pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vector<vector<double>>& dist_mtx,
+                      double UB_lagrange, vector<vector<double>>& base_mtx){
     pair<double, vii> bnb_solution;
 
     stack<Node> tree_DFS;
@@ -211,11 +241,9 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 		case 3:
 			tree_LBS.push(root);
 	}
+    int count = 0;
+    vector<vector<double>> mtx_debug = dist_mtx;
     while (!tree_DFS.empty() || !tree_BFS.empty() || !tree_LBS.empty()) {
-        // if(count == 5){
-        // 	break;
-        // }
-        
         Node node;
 
         switch (option) {
@@ -230,6 +258,21 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 node = LowerBoundSearch(tree_LBS);
                 break;
         }
+        //cout << "Custo do Node: " << node.lower_bound << " , ";
+        // if(count == 40){
+        //     for (const auto& aresta : node.edges) {
+        //         cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+        //     }
+        //     auto grau = CheckGrau(node.edges);
+        //     int index1, index2;
+        //     for (int i = 0; i < grau.size(); i++) {
+        //         if(grau[i] != 2){
+        //             cout << i << "-> Grau: " << grau[i] << endl;
+        //             index1 = i;
+        //         }
+        //     }
+        // 	break;
+        // }
 
         if (node.lower_bound > upper_bound)
         {
@@ -243,19 +286,20 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 cout << "vazio\n";
             }
 
-            for(auto aresta : node.edges){
-                cout << "(" << aresta.first << "," << aresta.second << ")\n";
-            }
+            // for(auto aresta : node.edges){
+            //     cout << "(" << aresta.first << "," << aresta.second << ")\n";
+            // }
 
             if(node.lower_bound < upper_bound){
+                cout << "Atualizei a UB\n";
                 upper_bound = node.lower_bound;
                 solution = node.edges;
             }
         }else {
             /* Adicionando os filhos */
             //int ordem = tree_BFS.size();
-            //cout << "Grau do escolhido: " << node.grau[node.chosen] << endl;
-            //cout << "Escolhido: " << node.chosen << endl;
+            // cout << "Grau do escolhido: " << node.grau[node.chosen] << endl;
+            // cout << "Escolhido: " << node.chosen << endl;
             vector<int> connected = GetConnectedVertices(node.chosen, node.edges);
             //cout << "conectei\n";
             if(node.grau.empty()){
@@ -284,6 +328,9 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 // cout << "arco ruim i:"<< forbidden_arc.first <<" j: "<< forbidden_arc.second << endl;
                 // cout << "(" << ordem << ")" <<endl;
 
+                int org_cost1 = local_mtx[forbidden_arc.first][forbidden_arc.second];
+                int org_cost2 = local_mtx[forbidden_arc.second][forbidden_arc.first];
+
                 local_mtx[forbidden_arc.first][forbidden_arc.second] = 9999999;
                 local_mtx[forbidden_arc.second][forbidden_arc.first] = 9999999;
 
@@ -292,17 +339,37 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                     local_mtx[n.forbidden_arcs[i].second][n.forbidden_arcs[i].first] = 9999999;
 				}
 
-                //printDistanceMatrixLiteral(local_mtx);
+                for(int i = 0; i < local_mtx[0].size(); i++){
+                    for(int j = i+1; j < local_mtx[0].size(); j++){
+                        local_mtx[j][i] = local_mtx[i][j];
+                    }
+                }
+
+                // printDistanceMatrixLiteral(local_mtx);
 
                 // for(int i = 0; i < n.forbidden_arcs.size(); i++){
                 //     local_mtx[n.forbidden_arcs[i].first-1][n.forbidden_arcs[i].second-1] = 99999999;
                 // }
 
-                LagrangeDual local_dual = SolveLagrangianDual(local_mtx, dist_mtx, UB_lagrange, false);
-                
+                LagrangeDual local_dual = SolveLagrangianDual(local_mtx, base_mtx, UB_lagrange, false);
+                 
                 n.lower_bound = local_dual.cost;
                 //cout << "Custo Interno do Dual: " << n.lower_bound << endl;
                 n.edges = local_dual.edges;
+
+                // if(n.lower_bound > 5050){
+                //     for (const auto& aresta : n.edges) {
+                //         cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+                //     }
+                //     for(int i = 0; i < local_mtx[0].size(); i++){
+                //         for(int j = i+1; j < local_mtx[0].size(); j++){
+                //             local_mtx[j][i] = local_mtx[i][j];
+                //         }
+                //     }
+
+                //     printDistanceMatrixLiteral(local_mtx);
+                // }
+
                 if(n.edges.empty()){
                     cout << "ERRO!\n";
                     //printDistanceMatrixLiteral(local_mtx);
@@ -336,10 +403,13 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 // for (const auto& aresta : n.edges) {
                 //     cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
                 // }
-
+                local_mtx[forbidden_arc.first][forbidden_arc.second] = org_cost1;
+                local_mtx[forbidden_arc.second][forbidden_arc.first] = org_cost2;
+                mtx_debug = local_mtx;
                 //break; //TESETR
             }
         }
+        count++;
         //break; //TESTE
     }
 
@@ -348,7 +418,7 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
     return bnb_solution;
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv){ 
 
     auto start = chrono::high_resolution_clock::now();
 
@@ -356,6 +426,8 @@ int main(int argc, char** argv){
     data.read();
 
     Solution tsp = solve(data);
+
+    exibirSolucao(tsp);
 
     //cout << "Custo: " << tsp.solve() << endl;
     double UB_lagrange = tsp.valorObj;
@@ -371,18 +443,64 @@ int main(int argc, char** argv){
         }
     }
 
+    //printDistanceMatrixLiteral(dist_mtx);
+
+    // // Sequência do caminho (convertida para índices base 0)
+    // vector<int> caminho = {0, 1, 13, 2, 3, 4, 5, 11, 6, 12, 7, 10, 8, 9, 0};
+
+    // // Conjunto de pares válidos (arestas do caminho)
+    // set<pair<int, int>> arestasValidas;
+    // for (size_t i = 0; i < caminho.size() - 1; ++i) {
+    //     int u = caminho[i];
+    //     int v = caminho[i + 1];
+    //     arestasValidas.insert({u, v});
+    //     arestasValidas.insert({v, u}); // Adiciona o reverso para grafo não direcionado
+    // }
+
+    // // Substituir elementos fora do caminho por 999999
+    // for (int i = 0; i < 14; ++i) {
+    //     for (int j = 0; j < 14; ++j) {
+    //         if (arestasValidas.find({i, j}) == arestasValidas.end()) {
+    //             dist_mtx[i][j] = 999999;
+    //         }
+    //     }
+    // }
+
+    //printDistanceMatrixLiteral(dist_mtx);
+
     vector<vector<double>> base_mtx = dist_mtx;
 
-    LagrangeDual lagrangianDual = SolveLagrangianDual(dist_mtx, base_mtx, UB_lagrange, false);
+    LagrangeDual lagrangianDual = SolveLagrangianDual(dist_mtx, base_mtx, /*148*/ UB_lagrange, false);
 
     // cout << "Antes: \n"; 
 
     for (const auto& aresta : lagrangianDual.edges) {
-        cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+        cout << "(" << aresta.first + 1 << ", " << aresta.second + 1 << ")" << endl;
     }
 
     int lower_bound = lagrangianDual.cost;
     cout << "Custo Inicial: " << lower_bound << endl;
+
+    // if(CheckFeasible(CheckGrau(lagrangianDual.edges))){
+    //     cout << "Show de bola\n";
+    // }
+
+    // printDistanceMatrixLiteral(dist_mtx);
+    // printDistanceMatrixLiteral(base_mtx);
+    // cout << "Vetor: " << endl;
+    // for (const auto& aresta : lagrangianDual.vec_pen) {
+    //     cout << "(" << aresta << ") ";
+    // }
+    // cout << endl;
+
+    // float custo = 0;
+    // for(int i = 0; i < 5; i++){
+    //     custo += dist_mtx[lagrangianDual.edges[i].first][lagrangianDual.edges[i].second];
+    // }
+
+    // cout << "Custo teste: " << custo << endl;
+
+    // return 0;
 
     //printDistanceMatrixLiteral(dist_mtx);
 
@@ -397,15 +515,16 @@ int main(int argc, char** argv){
     // }
     // cout << "Escolhido: " << root.chosen << endl;
 
-    pair<double, vii> bnb_solution = BnB(root, 1, lower_bound, data, base_mtx, UB_lagrange); //refletir se é base ou a dist
+    pair<double, vii> bnb_solution = BnB(root, 1, lower_bound, data, dist_mtx, UB_lagrange,
+                                    base_mtx); //refletir se é base ou a dist
 
-    // cout << "Depois: \n"; 
+    cout << "Depois: \n"; 
 
-    // for (const auto& aresta : bnb_solution.second) {
-    //     cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
-    // }
+    for (const auto& aresta : bnb_solution.second) {
+        cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+    }
 
-    //cout << "Custo Final: " << bnb_solution.first << endl;
+    cout << "Custo Final: " << bnb_solution.first << endl;
 
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
