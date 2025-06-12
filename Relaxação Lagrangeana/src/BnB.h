@@ -19,6 +19,7 @@ using namespace std;
 typedef struct{
 	vector<pair<int, int>> forbidden_arcs; // lista de arcos proibidos do nó
     vector<int> grau;
+	vector<double> lambda;
     vii edges;
 	double lower_bound; // custo total da solucao do algoritmo 
 	int chosen; // indice do menor grau
@@ -78,6 +79,10 @@ Node DepthFirstSearch(stack<Node>& tree/*, Node& root, hungarian_problem_t &p, D
 	// }
     node.grau = CheckGrau(node.edges);
     node.feasible = CheckFeasible(node.grau);
+
+	// if(node.feasible){
+	// 	cout << "Viavel na estratégia\n";
+	// }
 
 	return node;
 }

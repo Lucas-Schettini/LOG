@@ -8,6 +8,8 @@
         "array": "cpp",
         "string": "cpp",
         "string_view": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "numeric": "cpp",
+        "ostream": "cpp"
     }
 }

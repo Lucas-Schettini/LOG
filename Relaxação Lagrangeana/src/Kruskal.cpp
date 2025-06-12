@@ -1,7 +1,7 @@
 #include "Kruskal.h"
 
 Kruskal::Kruskal(vvi dist){
-	for(int i = 1; i < dist.size(); ++i){
+	for(int i = 1; i < dist.size(); ++i){ //desconsidera o 0
 		for(int j = 1; j < dist[i].size(); ++j){
 			if(i != j){
 				graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
@@ -65,7 +65,7 @@ double Kruskal::MST(int nodes, vector<vector<double>>& dist_mtx){
 
     for(int i = 0; i < 2; ++i) {
         int v = conn_0[i].second;
-        edges.push_back({v, 0});
+        edges.push_back({0, v});
         cost += conn_0[i].first;
     }
 
