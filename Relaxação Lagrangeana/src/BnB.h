@@ -58,8 +58,12 @@ Node BreadthFirstSearch(queue<Node>& tree){
 	// } else{
 	// 	node.feasible = false;
 	// }
-    vector<int> deg = CheckGrau(node.edges);
-    node.feasible = CheckFeasible(deg);
+
+    // vector<int> deg = CheckGrau(node.edges);
+    // node.feasible = CheckFeasible(deg);
+
+	node.grau = CheckGrau(node.edges);
+    node.feasible = CheckFeasible(node.grau);
 
 	return node;
 }
@@ -102,8 +106,11 @@ Node LowerBoundSearch(priority_queue<Node, vector <Node>, Min_heap>& tree){
 	// } else{
 	// 	node.feasible = false;
 	// }
-    vector<int> deg = CheckGrau(node.edges);
-    node.feasible = CheckFeasible(deg);
+    // vector<int> deg = CheckGrau(node.edges);
+    // node.feasible = CheckFeasible(deg);
+
+	node.grau = CheckGrau(node.edges);
+    node.feasible = CheckFeasible(node.grau);
 
 	return node;
 }

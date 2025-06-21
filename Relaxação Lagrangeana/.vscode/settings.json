@@ -10,6 +10,7 @@
         "string_view": "cpp",
         "limits": "cpp",
         "numeric": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "vector": "cpp"
     }
 }

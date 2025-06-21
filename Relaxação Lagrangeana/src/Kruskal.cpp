@@ -12,7 +12,7 @@ Kruskal::Kruskal(vvi dist){
 
 void Kruskal::initDisjoint(int n){
 	pset.resize(n);
-	for (int i = 0; i < n; ++i){
+	for (int i = 1; i < n; ++i){ //tentando tirar o 0
 		pset[i] = i;
 	}
 }
@@ -22,6 +22,9 @@ int Kruskal::findSet(int i){
 }
 
 void Kruskal::unionSet(int i, int j){
+	if(i == 0 || j == 0){ //tentando tirar o 0
+		return;
+	}
 	pset[findSet(i)] = findSet(j);
 }
 
