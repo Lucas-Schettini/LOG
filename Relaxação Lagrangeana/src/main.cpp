@@ -6,6 +6,8 @@
 #include <chrono>
 #include <iomanip>
 #include <set>
+#include <string>
+#include <unordered_set>
 
 //Dados do exemplo:
 // vector<vector<double>> dist_mtx = {{0, 30, 26, 50, 40}, 
@@ -177,7 +179,8 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 	queue<Node> tree_BFS;
 	priority_queue<Node, vector <Node>, Min_heap> tree_LBS;
 
-    double upper_bound = numeric_limits<double>::infinity();
+    // double upper_bound = numeric_limits<double>::infinity();
+    double upper_bound = UB_lagrange;
 
     vii solution (data.getDimension() + 1);
 
@@ -194,7 +197,9 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 			tree_LBS.push(root);
 	}
     int count = 0;
-    vector<vector<double>> mtx_debug = dist_mtx;
+    // vector<vector<double>> mtx_debug = dist_mtx;
+    unordered_set<string> seenSubproblems;
+
     while (!tree_DFS.empty() || !tree_BFS.empty() || !tree_LBS.empty()) {
         Node node;
 
@@ -210,10 +215,10 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 node = LowerBoundSearch(tree_LBS);
                 break;
         }
-        if(count == 5){
-        // //     for (const auto& aresta : node.edges) {
-        // //         cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
-        // //     }
+        // if(count == 20){
+        // // //     for (const auto& aresta : node.edges) {
+        // // //         cout << "(" << aresta.first << ", " << aresta.second << ")" << endl;
+        // // //     }
         //     auto grau = CheckGrau(node.edges);
         //     int index1, index2;
         //     for (int i = 0; i < grau.size(); i++) {
@@ -222,9 +227,9 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
         //             index1 = i;
         //         }
         //     }
-        //     // printDistanceMatrixLiteral(mtx_debug);
-            //break;
-        }
+        //     //printDistanceMatrixLiteral(mtx_debug);
+        //     break;
+        // }
 
         if (node.lower_bound > upper_bound)
         {
@@ -232,7 +237,7 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
         }
 
         if (node.feasible){
-            //cout << "opa é viavel\n";
+            cout << "opa é viavel\n";
 
             if(node.lower_bound < upper_bound){
                 // cout << "Atualizei a UB\n";
@@ -244,9 +249,14 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 
             vector<int> connected = GetConnectedVertices(node.chosen, node.edges);
 
-            // if(node.grau[node.chosen] >= 4){
-            //     continue;
-            // }
+            if(node.grau[node.chosen] >= 4){
+                // for(auto vertice : node.grau){
+                //     cout << vertice << " ";
+                // }
+                // cout << endl;
+                // continue;
+                cout << "grande\n";
+            }
 
             if(node.grau.empty()){
                 cout << "vetor vazio\n";
@@ -254,6 +264,7 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
             for (int i = 0; i < node.grau[node.chosen]; i++){
                 auto local_mtx = base_mtx;
                 int ordem = tree_DFS.size();
+                //int ordem = tree_BFS.size();
                 Node n;
 
                 n.forbidden_arcs = node.forbidden_arcs; 
@@ -275,7 +286,7 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 };
 
                 // cout << "arco ruim i:"<< forbidden_arc.first +1 <<" j: "<< forbidden_arc.second +1 << endl;
-                // cout << "(" << ordem << ")" <<endl;
+                cout << "(" << ordem << ")" <<endl;
 
                 int org_cost1 = local_mtx[forbidden_arc.first][forbidden_arc.second];
 
@@ -287,19 +298,11 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                     local_mtx[n.forbidden_arcs[i].second][n.forbidden_arcs[i].first] = 999999;
 				}
 
-                // for(int i = 0; i < local_mtx[0].size(); i++){
-                //     for(int j = i+1; j < local_mtx[0].size(); j++){
-                //         local_mtx[j][i] = local_mtx[i][j];
-                //     }
-                // }
-
                 // printDistanceMatrixLiteral(local_mtx);
 
-                // for(int i = 0; i < n.forbidden_arcs.size(); i++){
-                //     local_mtx[n.forbidden_arcs[i].first-1][n.forbidden_arcs[i].second-1] = 999999;
-                // }
-
                 LagrangeDual local_dual = SolveLagrangianDual(local_mtx, base_mtx, UB_lagrange, false, n.lambda);
+
+                //if (n.lower_bound >= upper_bound) continue;
                  
                 n.lower_bound = local_dual.cost;
                 n.edges = local_dual.edges;
@@ -315,27 +318,25 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                     n.feasible = true;
                 }
 
-                // if(n.grau[n.chosen] != 2){
-                    n.forbidden_arcs.push_back(forbidden_arc);
+                n.forbidden_arcs.push_back(forbidden_arc);
 
-                    switch (option) { // inserir novos nos na arvore
-                        case 1:
-                            tree_DFS.push(n);
-                            // cout << "entrei\n"; 
-                            break;
-                        case 2:
-                            tree_BFS.push(n);
-                            // cout << "entrei\n";
-                            break;
-                        case 3:
-                            tree_LBS.push(n);
-                            break;
-                    }
-                // }
+                switch (option) { // inserir novos nos na arvore
+                    case 1:
+                        tree_DFS.push(n);
+                        // cout << "entrei\n"; 
+                        break;
+                    case 2:
+                        tree_BFS.push(n);
+                        // cout << "entrei\n";
+                        break;
+                    case 3:
+                        tree_LBS.push(n);
+                        break;
+                }
 
                 local_mtx[forbidden_arc.first][forbidden_arc.second] = org_cost1;
                 // printDistanceMatrixLiteral(local_mtx);
-                mtx_debug = local_mtx;
+                // mtx_debug = local_mtx;
                 //break; //TESETR
             }
         }
@@ -394,7 +395,7 @@ int main(int argc, char** argv){
     // }
 
     int lower_bound = lagrangianDual.cost;
-    cout << "Custo Inicial: " << lower_bound << endl;
+    // cout << "Custo Inicial: " << lower_bound << endl;
 
     // if(CheckFeasible(CheckGrau(lagrangianDual.edges))){
     //     cout << "Show de bola\n";
@@ -432,11 +433,10 @@ int main(int argc, char** argv){
     //     cout << "(" << aresta.first + 1 << ", " << aresta.second + 1 << ")" << endl;
     // }
 
-    cout << "Custo Final: " << bnb_solution.first << endl;
-
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
 
+    cout << "Custo Final: " << bnb_solution.first << endl;
     cout << "Tempo de execução: " << duration.count() << endl;
 
     return 0;
