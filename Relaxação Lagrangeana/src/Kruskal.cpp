@@ -2,7 +2,7 @@
 
 Kruskal::Kruskal(vvi dist){
 	for(int i = 1; i < dist.size(); ++i){ //desconsidera o 0
-		for(int j = 1; j < dist[i].size(); ++j){
+		for(int j = i+1; j < dist[i].size(); ++j){
 			if(i != j){
 				graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
 			}
@@ -22,9 +22,9 @@ int Kruskal::findSet(int i){
 }
 
 void Kruskal::unionSet(int i, int j){
-	if(i == 0 || j == 0){ //tentando tirar o 0
-		return;
-	}
+	// if(i == 0 || j == 0){ //tentando tirar o 0
+	// 	return;
+	// }
 	pset[findSet(i)] = findSet(j);
 }
 
@@ -45,10 +45,10 @@ double Kruskal::MST(int nodes, vector<vector<double>>& dist_mtx){
 	while(!graph.empty()){
 		pair<double, ii> p = graph.top();
 		graph.pop();
-
-        if(p.first == 0 || p.second.first == 0){ //fazer desconsiderando o nó 0
-            continue;
-        }
+ 
+        // if(p.first == 0 || p.second.first == 0){ //fazer desconsiderando o nó 0
+        //     continue;
+        // }
 
 		if(!isSameSet(p.second.first, p.second.second)){
 			edges.push_back(make_pair(p.second.first, p.second.second));
@@ -71,6 +71,10 @@ double Kruskal::MST(int nodes, vector<vector<double>>& dist_mtx){
         edges.push_back({0, v});
         cost += conn_0[i].first;
     }
+
+	for(auto a : conn_0){
+		cout << a.first << endl;  
+	}
 
 	return cost;
 }

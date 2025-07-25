@@ -119,7 +119,7 @@ LagrangeDual SolveLagrangianDual(vector<vector<double>>& dist_mtx, vector<vector
             best_w = w;
             best_pen = vec_pen;
             edges_dual = edges_MST;
-
+            
             break;
         }
 
@@ -179,8 +179,8 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 	queue<Node> tree_BFS;
 	priority_queue<Node, vector <Node>, Min_heap> tree_LBS;
 
-    // double upper_bound = numeric_limits<double>::infinity();
-    double upper_bound = UB_lagrange;
+    double upper_bound = numeric_limits<double>::infinity();
+    // double upper_bound = UB_lagrange;
 
     vii solution (data.getDimension() + 1);
 
@@ -249,14 +249,14 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 
             vector<int> connected = GetConnectedVertices(node.chosen, node.edges);
 
-            if(node.grau[node.chosen] >= 4){
-                // for(auto vertice : node.grau){
-                //     cout << vertice << " ";
-                // }
-                // cout << endl;
-                // continue;
-                cout << "grande\n";
-            }
+            // if(node.grau[node.chosen] >= 4){
+            //     // for(auto vertice : node.grau){
+            //     //     cout << vertice << " ";
+            //     // }
+            //     // cout << endl;
+            //     continue;
+            //     //cout << "grande\n";
+            // }
 
             if(node.grau.empty()){
                 cout << "vetor vazio\n";
@@ -299,7 +299,7 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
 				}
 
                 // printDistanceMatrixLiteral(local_mtx);
-
+                
                 LagrangeDual local_dual = SolveLagrangianDual(local_mtx, base_mtx, UB_lagrange, false, n.lambda);
 
                 //if (n.lower_bound >= upper_bound) continue;
@@ -308,7 +308,6 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 n.edges = local_dual.edges;
 
                 n.lambda = local_dual.vec_pen; // faz dps de resolver o dual
-
                 vector<int> deg = CheckGrau(n.edges);
                 n.chosen = distance(deg.begin(), max_element(deg.begin(), deg.end())); // maior grau
                 n.grau = deg;
@@ -319,7 +318,6 @@ pair<double, vii> BnB(Node root, int option, double lower_bound, Data& data, vec
                 }
 
                 n.forbidden_arcs.push_back(forbidden_arc);
-
                 switch (option) { // inserir novos nos na arvore
                     case 1:
                         tree_DFS.push(n);
