@@ -13,7 +13,6 @@
 using namespace std;
 
 #include "Data.h"
-// #include "hungarian.h"
 #include "Kruskal.h"
 
 typedef struct{
@@ -26,11 +25,9 @@ typedef struct{
 	bool feasible; // indica se a solucao do e viavel
 } Node;
 
-vector<int> CheckGrau(vii edges){
-    //cout << "Solução: " << endl;
+vector<int> CheckGrau(vii edges){    
     vector<int> deg(edges.size(),0);
     for(auto &e : edges){
-        //cout << "(" << e.first << e.second << ")" << endl; 
         int u = e.first;
         int v = e.second;
         deg[u]++;
@@ -53,15 +50,6 @@ Node BreadthFirstSearch(queue<Node>& tree){
 	Node node = tree.front();
 	tree.pop();
 
-	// if(node.subtour.size() == 1){
-	// 	node.feasible = true;
-	// } else{
-	// 	node.feasible = false;
-	// }
-
-    // vector<int> deg = CheckGrau(node.edges);
-    // node.feasible = CheckFeasible(deg);
-
 	node.grau = CheckGrau(node.edges);
     node.feasible = CheckFeasible(node.grau);
 
@@ -72,21 +60,8 @@ Node DepthFirstSearch(stack<Node>& tree/*, Node& root, hungarian_problem_t &p, D
 	Node node = tree.top();
 	tree.pop();
 
-	//node.lower_bound = hungarian_solve(&p);
-
-	//node.subtour = checkSubTour(p,data);
-	// cout << node.subtour.size() << endl;
-	// if(node.subtour.size() == 1){
-	// 	node.feasible = true;
-	// } else{
-	// 	node.feasible = false;
-	// }
     node.grau = CheckGrau(node.edges);
     node.feasible = CheckFeasible(node.grau);
-
-	// if(node.feasible){
-	// 	cout << "Viavel na estratégia\n";
-	// }
 
 	return node;
 }
@@ -100,14 +75,6 @@ struct Min_heap {
 Node LowerBoundSearch(priority_queue<Node, vector <Node>, Min_heap>& tree){
 	Node node = tree.top();
 	tree.pop();
-
-	// if(node.subtour.size() == 1){
-	// 	node.feasible = true;
-	// } else{
-	// 	node.feasible = false;
-	// }
-    // vector<int> deg = CheckGrau(node.edges);
-    // node.feasible = CheckFeasible(deg);
 
 	node.grau = CheckGrau(node.edges);
     node.feasible = CheckFeasible(node.grau);

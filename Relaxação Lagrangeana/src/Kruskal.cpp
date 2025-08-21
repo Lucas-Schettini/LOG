@@ -59,8 +59,13 @@ double Kruskal::MST(int nodes, vector<vector<double>>& dist_mtx){
 
     vector<pair<double, int>> conn_0; //fazer a inserção do nó 0
 
+	int b = 0;
+
     for(int j = 1; j < nodes; ++j) {
         double cost_0 = dist_mtx[0][j];
+		if(cost_0 > 20000){
+			b++;
+		}
         conn_0.push_back({cost_0, j});
     }
 
@@ -72,9 +77,9 @@ double Kruskal::MST(int nodes, vector<vector<double>>& dist_mtx){
         cost += conn_0[i].first;
     }
 
-	for(auto a : conn_0){
-		cout << a.first << endl;  
-	}
+	// for(auto a : conn_0){
+	// 	cout << a.first << endl;  
+	// }
 
 	return cost;
 }
