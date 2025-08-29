@@ -5,30 +5,15 @@
 /***************************************************/
 #include "separation.h"
 #include <vector>
-#include <unordered_set>
 
-vector <vector<int> > MaxBack(double** x, int n){
-    
-    vector<int> solution_init = {0}; //definir a solução inicial a partir da matriz
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            if(x[i][j] < EPSILON){
-                x[i][j] = 0;
-            }
-            cout << x[i][j] << " ";
-        }
-        cout << "\n";
-    }
-
-    //unordered_set <int> solSet(solution_init.begin(), solution_init.end());
+vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
 
     vector<bool> connected(n, 0);
-    connected[0] = true;
+    connected[init] = true;
 
-    cout << "\nMax_back: ";
+    vector<int> local_solution = {init};
 
     vector <double> maxback_val(n, 0); //variável que diz as conexões internas (?) -> fazer ele já como o número maior pode ajudar
-    double max_back = 0; //maior termo do maxback_val, acho que fazer assim fica mais clean
     
     for(int i = 0; i < n; i++){
         if(connected[i]){
@@ -50,13 +35,17 @@ vector <vector<int> > MaxBack(double** x, int n){
 
     cout << "\nCut val: " << cut_val << endl;
 
+    // double mincut_val = cut_val;
+
+    // vector <int> solution = {0};
+
+    // auto local_solution = solution;
+
     double mincut_val = cut_val;
+    
+    auto solution = local_solution;
 
-    auto solution = solution_init;
-
-    auto local_solution = solution_init;
-
-    for(int i = 0; i < (n - solution_init.size()); i++){
+    for(int i = 0; i < (n - 1/*solution.size()*/); i++){
         auto max_index = max_element(maxback_val.begin(), maxback_val.end());
         cout << "Max: " << std::distance(maxback_val.begin(), max_index) << "\n";
 
@@ -67,15 +56,21 @@ vector <vector<int> > MaxBack(double** x, int n){
         }cout << endl;
 
         local_solution.push_back(std::distance(maxback_val.begin(), max_index)); //não é o valor máximo, é o indice do valor máximo
+
         connected[max_value] = true;
+        
         cout << "Local: ";
+        
         for(auto i : local_solution){
             cout << i << " -> "; 
         }
         cout << "\n";
-        unordered_set <double> local_set(local_solution.begin(), local_solution.end());
 
         cut_val = cut_val + 2 - 2 * (*max_index);
+
+        cout << "new cut val: " << cut_val << "\n";
+
+        maxback_val[max_value] = 0;
 
         for(int j = 0; j < n; j++){ //atualizar o max_back
             if(connected[j] == false){
@@ -90,10 +85,59 @@ vector <vector<int> > MaxBack(double** x, int n){
         if(cut_val < mincut_val + EPSILON){
             mincut_val = cut_val;
             solution = local_solution;
+
+            cout << "solution: ";
+
+            for(auto i : solution){
+                cout << i << " -> "; 
+            }
+
+            cout << "\n";
         }
 
+        if(cut_val == 0){
+            //subtours.push_back(solution);
+            for(int i = 0; i < solution.size(); i++){ // ta errado
+                visited[solution[i]] == 1;
+            }
+            return solution;
+        }
     }
     return {};
+}
+
+vector <vector<int> > MaxBack(double** x, int n){
+
+    vector<vector <int>> subtours;
+    
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            if(x[i][j] < EPSILON){
+                x[i][j] = 0;
+            }
+            cout << x[i][j] << " ";
+        }
+        cout << "\n";
+    }
+
+    vector<bool> visited(n,0);
+
+    subtours.push_back(OneTourMaxBack(n, x, 0, visited)); 
+
+    cout<< "\nPrimeiro subtour feito\n";
+
+    int next;
+
+    for(int i = 0; i < n; i++){
+        if(visited[i] == 0){
+            next = i;
+            break;
+        }
+    }
+
+    subtours.push_back(OneTourMaxBack(n, x, next, visited));
+
+    return {} /*subtours*/;
 }
 vector <vector<int> > MinCut(double** x, int n){
     return {};
