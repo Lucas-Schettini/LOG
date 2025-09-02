@@ -6,7 +6,7 @@
 #include "separation.h"
 #include <vector>
 
-vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
+pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
 
     vector<bool> connected(n, 0);
     connected[init] = true;
@@ -104,7 +104,7 @@ vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
             // for(auto a : visited){
             //     cout << a << " ";
             // }cout << "\n";
-            return solution;
+            return make_pair(solution, cut_val);
         }
     }
     return {};
@@ -129,7 +129,7 @@ vector <vector<int> > MaxBack(double** x, int n){
     int next = 0;
 
     while(true){
-        subtours.push_back(OneTourMaxBack(n, x, next, visited)); 
+        subtours.push_back(OneTourMaxBack(n, x, next, visited).first); 
 
         for(int i = 0; i < n; i++){
             if(visited[i] == 0){
@@ -173,18 +173,42 @@ vector <vector<int> > MaxBack(double** x, int n){
     return subtours;
 }
 
-vector<int> Shrink(){
+void Shrink(double ** x, vector<int> max_back_tour){
     return {};
 }
 
 vector <vector<int> > MinCut(double** x, int n){
 
-    // double mincut_val = 999999;
+    double mincut_val = 999999;
+    vector<vector <int> subtours;
 
-    // for(int i = 0; i < n; i++){
-    //     auto local_solution = OneTourMaxBack(n, x , 0, vector<bool> (n,0));
-        
-    // }
+    double** x_mincut;
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            if(x[i][j] < EPSILON){
+                x[i][j] = 0;
+            }
+            x_mincut[i][j] = x[i][j];
+        }
+    }
+
+    vector<bool> visited (n,0);
+
+    for(int i = 0; i < n; i++){
+        auto local_solution = OneTourMaxBack(n, x , 0, visited);
+
+        auto max_back_tour = local_solution.first;
+
+        auto cut_val = local_solution.second;
+
+        if(cut_val < mincut_val){
+            mincut_val = cut_val;
+            tour = max_back_tour;
+        }
+
+        Shrink(x, max_back_tour);
+
+    }
 
     return {};
 }
