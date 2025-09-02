@@ -21,7 +21,7 @@ vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
                 maxback_val[j] += x[i][j]; 
             }
         }
-        cout << maxback_val[i] << " ";
+        //cout << maxback_val[i] << " ";
     }
 
     double cut_val = 0; // variável que diz o somatório de todas as conexões dos que não estão conectados com a solução
@@ -33,7 +33,7 @@ vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
         }
     }
 
-    cout << "\nCut val: " << cut_val << endl;
+    // cout << "\nCut val: " << cut_val << endl;
 
     // double mincut_val = cut_val;
 
@@ -47,28 +47,28 @@ vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
 
     for(int i = 0; i < (n - 1/*solution.size()*/); i++){
         auto max_index = max_element(maxback_val.begin(), maxback_val.end());
-        cout << "Max: " << std::distance(maxback_val.begin(), max_index) << "\n";
+        //cout << "Max: " << std::distance(maxback_val.begin(), max_index) << "\n";
 
         auto max_value = std::distance(maxback_val.begin(), max_index);
 
-        for (auto a : maxback_val){
-            cout << a << ' ';
-        }cout << endl;
+        // for (auto a : maxback_val){
+        //     cout << a << ' ';
+        // }cout << endl;
 
         local_solution.push_back(std::distance(maxback_val.begin(), max_index)); //não é o valor máximo, é o indice do valor máximo
 
         connected[max_value] = true;
         
-        cout << "Local: ";
+        // cout << "Local: ";
         
-        for(auto i : local_solution){
-            cout << i << " -> "; 
-        }
-        cout << "\n";
+        // for(auto i : local_solution){
+        //     cout << i << " -> "; 
+        // }
+        // cout << "\n";
 
         cut_val = cut_val + 2 - 2 * (*max_index);
 
-        cout << "new cut val: " << cut_val << "\n";
+        //cout << "new cut val: " << cut_val << "\n";
 
         maxback_val[max_value] = 0;
 
@@ -86,20 +86,24 @@ vector<int> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited){
             mincut_val = cut_val;
             solution = local_solution;
 
-            cout << "solution: ";
+            //cout << "solution: ";
 
-            for(auto i : solution){
-                cout << i << " -> "; 
-            }
+            // for(auto i : solution){
+            //     cout << i << " -> "; 
+            // }
 
-            cout << "\n";
+            //cout << "\n";
         }
 
         if(cut_val == 0){
             //subtours.push_back(solution);
             for(int i = 0; i < solution.size(); i++){ // ta errado
-                visited[solution[i]] == 1;
+                visited[solution[i]] = 1;
             }
+            // cout << "Visitados: ";
+            // for(auto a : visited){
+            //     cout << a << " ";
+            // }cout << "\n";
             return solution;
         }
     }
@@ -115,31 +119,73 @@ vector <vector<int> > MaxBack(double** x, int n){
             if(x[i][j] < EPSILON){
                 x[i][j] = 0;
             }
-            cout << x[i][j] << " ";
+            //cout << x[i][j] << " ";
         }
-        cout << "\n";
+        //cout << "\n";
     }
 
     vector<bool> visited(n,0);
 
-    subtours.push_back(OneTourMaxBack(n, x, 0, visited)); 
+    int next = 0;
 
-    cout<< "\nPrimeiro subtour feito\n";
+    while(true){
+        subtours.push_back(OneTourMaxBack(n, x, next, visited)); 
 
-    int next;
+        for(int i = 0; i < n; i++){
+            if(visited[i] == 0){
+                next = i;
+                break;
+            }
+        }
 
-    for(int i = 0; i < n; i++){
-        if(visited[i] == 0){
-            next = i;
+        if(visited == vector<bool> (n,1)){
             break;
         }
     }
 
-    subtours.push_back(OneTourMaxBack(n, x, next, visited));
+    // subtours.push_back(OneTourMaxBack(n, x, next, visited)); 
 
-    return {} /*subtours*/;
+    // cout<< "\nPrimeiro subtour feito\n";
+
+    // for(int i = 0; i < n; i++){
+    //     if(visited[i] == 0){
+    //         next = i;
+    //         break;
+    //     }
+    // }
+
+    // subtours.push_back(OneTourMaxBack(n, x, next, visited));
+
+    // cout<< "\nSegundo subtour feito\n";
+
+    // for(int i = 0; i < n; i++){
+    //     if(visited[i] == 0){
+    //         next = i;
+    //         break;
+    //     }
+    // }
+
+    // subtours.push_back(OneTourMaxBack(n, x, next, visited));
+
+    if(subtours.back().size() == n){
+        return{};
+    }
+    return subtours;
 }
+
+vector<int> Shrink(){
+    return {};
+}
+
 vector <vector<int> > MinCut(double** x, int n){
+
+    // double mincut_val = 999999;
+
+    // for(int i = 0; i < n; i++){
+    //     auto local_solution = OneTourMaxBack(n, x , 0, vector<bool> (n,0));
+        
+    // }
+
     return {};
 }
 
