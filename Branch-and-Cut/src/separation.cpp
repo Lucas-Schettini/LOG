@@ -113,10 +113,10 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
 vector <vector<int> > MaxBack(double** x, int n){
 
     vector<vector <int>> subtours;
-    
+    //cout << "matriz: \n";
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
-            if(x[i][j] < EPSILON){
+            if(x[i][j] < EPSILON || isnan(x[i][j])){ // posso só matar esse nan?
                 x[i][j] = 0;
             }
             //cout << x[i][j] << " ";
@@ -173,31 +173,60 @@ vector <vector<int> > MaxBack(double** x, int n){
     return subtours;
 }
 
-void Shrink(double ** x, vector<int> max_back_tour){
-    return {};
+void Shrink(double ** x_mincut, int n, vector<int> max_back_tour){
+
+    int s = max_back_tour[n-1];
+    cout << "s: " << s;
+    int t = max_back_tour[n-2];
+    cout << " t: " << t << endl;
+
+    for(int i = 0; i < n; i++){
+        cout << "i = " << i << " ";
+        for(int j = 0/*i+1*/; j < n; j++){
+            if(i == s || i == t){
+                x_mincut[i][j] = x_mincut[s][j] + x_mincut[t][j];
+            }
+            if(x_mincut[i][j] < EPSILON) x_mincut[i][j] = 0;
+            cout << x_mincut[i][j] << " ";
+        }
+        cout << "\n";
+    }
+    
 }
 
 vector <vector<int> > MinCut(double** x, int n){
 
     double mincut_val = 999999;
-    vector<vector <int> subtours;
+    vector<vector<int>> subtours;
+    vector <int> tour;
 
-    double** x_mincut;
+    double** x_mincut = new double*[n];
+
+    for (int i = 0; i < n; i++) {
+		x_mincut[i] = new double[n];
+	}
+
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
             if(x[i][j] < EPSILON){
                 x[i][j] = 0;
             }
             x_mincut[i][j] = x[i][j];
+            cout << x_mincut[i][j] << " ";
         }
+        cout << "\n";
     }
 
     vector<bool> visited (n,0);
 
     for(int i = 0; i < n; i++){
-        auto local_solution = OneTourMaxBack(n, x , 0, visited);
+        auto local_solution = OneTourMaxBack(n, x_mincut , 0, visited);
 
         auto max_back_tour = local_solution.first;
+        cout << "Tour: ";
+        for(auto a : max_back_tour){
+            cout << a << " -> ";
+        }cout << "\n";
 
         auto cut_val = local_solution.second;
 
@@ -206,7 +235,21 @@ vector <vector<int> > MinCut(double** x, int n){
             tour = max_back_tour;
         }
 
-        Shrink(x, max_back_tour);
+        // for(int i = 0; i < n; i++){
+        //     for(int j = 0; j < n; j++){
+        //         cout << x_mincut[i][j] << " ";
+        //     }
+        //     cout << "\n";
+        // }
+
+        Shrink(x_mincut, n, max_back_tour);
+
+        for(int i = 0; i < n; i++){
+            for(int j = 0; j < n; j++){
+                cout << x_mincut[i][j] << " ";
+            }
+            cout << "\n";
+        }
 
     }
 
