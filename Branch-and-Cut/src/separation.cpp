@@ -6,7 +6,7 @@
 #include "separation.h"
 #include <vector>
 
-pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited, bool mincut = 0, vector<vector> merge_sets = {{}}){
+pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited, bool mincut = 0, vector<vector<int>> merge_sets = {{}}){
 
     vector<bool> connected(n, 0);
     connected[init] = true;
@@ -22,7 +22,7 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
             }
         }
         //cout << maxback_val[i] << " ";
-    }
+    }//cout << endl;
 
     double cut_val = 0; // variável que diz o somatório de todas as conexões dos que não estão conectados com a solução
     for(int i = 0; i < n; i++){
@@ -39,33 +39,24 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
     
     auto solution = local_solution;
 
-    if(mincut){
-        for(int i = 0; i < merge_sets.size(); i++){
-            for(int j = i+1; j < n; j++){
-                if(merge_sets)
-            }
-        }
-    }
-
-    for(int i = 0; i < (n/*solution.size()*/); i++){
+    for(int i = 0; i < (n); i++){
         auto max_index = max_element(maxback_val.begin(), maxback_val.end());
         //cout << "Max: " << std::distance(maxback_val.begin(), max_index) << "\n";
 
         auto max_value = std::distance(maxback_val.begin(), max_index);
 
-        // for (auto a : maxback_val){
-        //     cout << a << ' ';
-        // }cout << endl;
+        if(mincut){
+            for(int i = 0; i < merge_sets.size(); i++){
+                for(int j = 0; j < merge_sets[i].size(); j++){
+                    if(max_value == merge_sets[i][j]){
+                        max_index = ;
+                    }
+                }
+            }
+        }
 
-        local_solution.push_back(std::distance(maxback_val.begin(), max_index));
+        local_solution.push_back(max_value);
         connected[max_value] = true;
-        
-        // cout << "Local: ";
-        
-        // for(auto i : local_solution){
-        //     cout << i << " -> "; 
-        // }
-        // cout << "\n";
 
         cut_val = cut_val + 2 - 2 * (*max_index);
 
@@ -108,6 +99,10 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
             return make_pair(solution, cut_val);
         }
     }
+    for(auto a : solution){
+        cout << a << " -> ";
+    } cout << '\n';
+
     return make_pair(solution, cut_val);
 }
 
@@ -174,7 +169,7 @@ vector <vector<int> > MaxBack(double** x, int n){
     return subtours;
 }
 
-void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour){
+void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<vector<int>>& merge_sets){
 
     int s = max_back_tour.back();
     cout << "s: " << s;
@@ -213,7 +208,16 @@ void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour){
         }
     }
 
-    merge_sets.push_back({s,t});
+    for(int i = 0; i < merge_sets.size(); i++){
+        for(int j = 0; j < merge_sets[i].size(); j++){
+            if(merge_sets[i][j] == s){
+                merge_sets[i].push_back(t); //se achar s no conjunto i, adicionar t no conjunto
+                return;
+            }
+        }
+    }
+
+    merge_sets.push_back({s,t}); //não achou s nos conjuntos, então é um conjunto novo
 }
 
 vector <vector<int> > MinCut(double** x, int n){
@@ -239,10 +243,19 @@ vector <vector<int> > MinCut(double** x, int n){
 
     vector<bool> visited (n,0);
 
-    vector<vector<int> merge_sets; // TENTAR FAZER USANDO VECTOR<VECTOR>
+    vector<vector<int>> merge_sets; // TENTAR FAZER USANDO VECTOR<VECTOR>
 
     for(int i = 0; i < n; i++){
-        auto local_solution = OneTourMaxBack(n, x_mincut , 0, visited, 1);
+        cout << "Conjuntos de nós fundidos: " << merge_sets.size() << endl;
+
+        for(int i = 0; i < merge_sets.size(); i++){
+            for(int j = 0; j < merge_sets[i].size(); j++){
+                cout << merge_sets[i][j] << " ";
+            }
+            cout << "\n";
+        }
+
+        auto local_solution = OneTourMaxBack(n, x_mincut , 0, visited, 1, merge_sets);
 
         auto max_back_tour = local_solution.first;
         cout << "Tour(" << max_back_tour.size() << "): \n";
@@ -262,15 +275,8 @@ vector <vector<int> > MinCut(double** x, int n){
             mincut_val = cut_val;
             subtours.push_back(max_back_tour);
         }
-        
-        Shrink(x_mincut, n, max_back_tour);
 
-        // for(int i = 0; i < n; i++){
-        //     for(int j = 0; j < n; j++){
-        //         cout << x_mincut[i][j] << " ";
-        //     }
-        //     cout << "\n";
-        // }
+        Shrink(x_mincut, n, max_back_tour, merge_sets);
 
     }
 
