@@ -17,6 +17,10 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
     
     for(int i = 0; i < n; i++){
         if(connected[i]){
+            if(mincut && merge_sets[i].empty()){
+                cout << "Pulei1: " << i << " \n";
+                continue;
+            } 
             for(int j = i + 1; j < n; j++){
                 maxback_val[j] += x[i][j]; 
             }
@@ -45,16 +49,6 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
 
         auto max_value = std::distance(maxback_val.begin(), max_index);
 
-        if(mincut){
-            for(int i = 0; i < merge_sets.size(); i++){
-                for(int j = 0; j < merge_sets[i].size(); j++){
-                    if(max_value == merge_sets[i][j]){
-                        max_index = ;
-                    }
-                }
-            }
-        }
-
         local_solution.push_back(max_value);
         connected[max_value] = true;
 
@@ -65,6 +59,13 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
         maxback_val[max_value] = 0;
 
         for(int j = 0; j < n; j++){ //atualizar o max_back
+
+            if(mincut && merge_sets[j].empty()){
+                // if(j == 15){
+                //     cout << "Pulei2: " << j << " \n";
+                // }
+                continue;
+            } 
             if(connected[j] == false){
                 if(j > max_value){
                     maxback_val[j] += x[max_value][j];
@@ -112,7 +113,7 @@ vector <vector<int> > MaxBack(double** x, int n){
     //cout << "matriz: \n";
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
-            if(x[i][j] < EPSILON || isnan(x[i][j])){ // posso só matar esse nan?
+            if(x[i][j] < EPSILON){
                 x[i][j] = 0;
             }
             //cout << x[i][j] << " ";
@@ -211,13 +212,17 @@ void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<
     for(int i = 0; i < merge_sets.size(); i++){
         for(int j = 0; j < merge_sets[i].size(); j++){
             if(merge_sets[i][j] == s){
-                merge_sets[i].push_back(t); //se achar s no conjunto i, adicionar t no conjunto
+                //merge_sets[i].push_back(t); //se achar s no conjunto i, adicionar t no conjunto
+                for(auto a : merge_sets[t]){
+                    merge_sets[i].push_back(a);
+                }
+                merge_sets[t].clear();
                 return;
             }
         }
     }
 
-    merge_sets.push_back({s,t}); //não achou s nos conjuntos, então é um conjunto novo
+    //merge_sets.push_back({s,t}); //não achou s nos conjuntos, então é um conjunto novo
 }
 
 vector <vector<int> > MinCut(double** x, int n){
@@ -243,12 +248,19 @@ vector <vector<int> > MinCut(double** x, int n){
 
     vector<bool> visited (n,0);
 
-    vector<vector<int>> merge_sets; // TENTAR FAZER USANDO VECTOR<VECTOR>
+    vector<vector<int>> merge_sets(n); 
 
     for(int i = 0; i < n; i++){
-        cout << "Conjuntos de nós fundidos: " << merge_sets.size() << endl;
+        merge_sets[i].push_back(i);
+    }
+
+    for(int i = 0; i < n; i++){
+        cout << "Conjuntos de nós fundidos: " << endl;
 
         for(int i = 0; i < merge_sets.size(); i++){
+            if(merge_sets[i].empty()){
+                continue;
+            }
             for(int j = 0; j < merge_sets[i].size(); j++){
                 cout << merge_sets[i][j] << " ";
             }
@@ -280,12 +292,12 @@ vector <vector<int> > MinCut(double** x, int n){
 
     }
 
-    if(subtours.back().size() == n){
-        return {};
-    }
+    // if(subtours.back().size() == n){
+    //     return {};
+    // }
 
 
-    return subtours;
+    return merge_sets;
 }
 
 
