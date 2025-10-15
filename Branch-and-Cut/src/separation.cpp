@@ -6,7 +6,12 @@
 #include "separation.h"
 #include <vector>
 
+//static int contador = 0;
+
 pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited, bool mincut = 0, vector<vector<int>> merge_sets = {{}}){
+
+    // contador++;
+    // cout << contador << endl;
 
     vector<bool> connected(n, 0);
     connected[init] = true;
@@ -77,6 +82,23 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
                     maxback_val[j] += x[max_value][j];
                 } else{
                     maxback_val[j] += x[j][max_value];
+                }
+            }
+        }
+
+        if(cut_val < EPSILON && mincut && (i == n - 1)){
+            cut_val = 0;
+
+            for(int i = 0; i < n; i++){
+                if(mincut && merge_sets[i].empty()){
+                        //cout << "Pulei1: " << i << " \n";
+                        continue;
+                }
+
+                for(int j = i+1; j < n; j++){
+                    if(connected[i] && !connected[j]){ 
+                        cut_val += x[i][j];
+                    }
                 }
             }
         }
@@ -295,7 +317,8 @@ vector <vector<int> > MinCut(double** x, int n){
 
         if(cut_val < mincut_val){
             mincut_val = cut_val;
-            //subtours.push_back(max_back_tour);
+            
+            //subtours.push_back(merge_sets[i]);
             subtours = merge_sets;
 
             // for(int k = 0; k < merge_sets.size(); k++){
@@ -326,7 +349,7 @@ vector <vector<int> > MinCut(double** x, int n){
     // }
 
     if(subtours_clean.back().size() == n){
-        cout << "RETORNEI\n\n\n\n";
+        //cout << "RETORNEI\n\n\n\n";
         return{};
     }
 
