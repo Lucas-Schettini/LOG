@@ -59,11 +59,13 @@ void MyCutCallback::main()
 			x_edge[i][j] = x_vals[l++];
 		}
 	}
-	
+
+	x_vals.end();
+
 	cutSetPool = MaxBack(x_edge, n);
 	
 	if (cutSetPool.empty() && depth <= 7) {
-		//cout << "\n\nMIN_CUT: \n\n\n";
+
 		cutSetPool = MinCut(x_edge, n);
 	}
 

@@ -6,12 +6,8 @@
 #include "separation.h"
 #include <vector>
 
-//static int contador = 0;
 
 pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited, bool mincut = 0, vector<vector<int>> merge_sets = {{}}){
-
-    // contador++;
-    // cout << contador << endl;
 
     vector<bool> connected(n, 0);
     connected[init] = true;
@@ -71,9 +67,6 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
         for(int j = 0; j < n; j++){ //atualizar o max_back
             
             if(mincut && merge_sets[j].empty()){
-                // if(j == 15){
-                //     cout << "Pulei2: " << j << " \n";
-                // }
                 maxback_val[j] = 0;
                 continue;
             } 
@@ -263,20 +256,20 @@ vector <vector<int> > MinCut(double** x, int n){
     vector<vector<int>> subtours;
     vector <int> tour;
 
-    double ** x_mincut = (double**)malloc(n * sizeof(double*));
+    // double ** x_mincut = (double**)malloc(n * sizeof(double*));
 
-    for(int i = 0; i < n; i++){
-        x_mincut[i] = (double*)malloc(n*sizeof(double*));
-    }
+    // for(int i = 0; i < n; i++){
+    //     x_mincut[i] = (double*)malloc(n*sizeof(double*));
+    // }
     
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            if(x[i][j] < EPSILON){
-                x[i][j] = 0;
-            }
-            x_mincut[i][j] = x[i][j];   
-        }
-    }
+    // for(int i = 0; i < n; i++){
+    //     for(int j = 0; j < n; j++){
+    //         if(x[i][j] < EPSILON){
+    //             x[i][j] = 0;
+    //         }
+    //         x_mincut[i][j] = x[i][j];   
+    //     }
+    // }
 
     vector<bool> visited (n,0);
 
@@ -299,7 +292,7 @@ vector <vector<int> > MinCut(double** x, int n){
         //     cout << "\n";
         // }
 
-        auto local_solution = OneTourMaxBack(n, x_mincut , 0, visited, 1, merge_sets);
+        auto local_solution = OneTourMaxBack(n, x , 0, visited, 1, merge_sets);
 
         auto max_back_tour = local_solution.first;
         //cout << "Tour(" << max_back_tour.size() << "): \n";
@@ -328,7 +321,7 @@ vector <vector<int> > MinCut(double** x, int n){
         }
 
         if(merge_sets[0].size() != n){
-            Shrink(x_mincut, n, max_back_tour, merge_sets);
+            Shrink(x, n, max_back_tour, merge_sets);
         }        
 
     }
@@ -348,10 +341,10 @@ vector <vector<int> > MinCut(double** x, int n){
     //     cout << "\n";
     // }
 
-    if(subtours_clean.back().size() == n){
-        //cout << "RETORNEI\n\n\n\n";
-        return{};
-    }
+    // if(subtours_clean.back().size() == n){
+    //     //cout << "RETORNEI\n\n\n\n";
+    //     return{};
+    // }
 
     //return merge_sets;
     return subtours_clean;
