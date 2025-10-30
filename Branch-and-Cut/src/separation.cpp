@@ -5,7 +5,7 @@
 /***************************************************/
 #include "separation.h"
 #include <vector>
-
+#include <queue>
 
 pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited, bool mincut = 0, vector<vector<int>> merge_sets = {{}}){
 
@@ -15,10 +15,17 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
     vector<int> local_solution = {init};
 
     vector <double> maxback_val(n, 0); //variável que diz as conexões internas
+
+    vector<bool> valid_node(n, true);
+    if (mincut) {
+        for (int i = 0; i < n; i++) {
+            valid_node[i] = !merge_sets[i].empty();
+        }
+    }
     
     for(int i = 0; i < n; i++){
         if(connected[i]){
-            if(mincut && merge_sets[i].empty()){
+            if(!valid_node[i]){
                 continue;
             } 
             for(int j = i + 1; j < n; j++){
@@ -29,9 +36,11 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
     }
 
     double cut_val = 0; // variável que diz o somatório de todas as conexões dos que não estão conectados com a solução
+    double cut_val_phase = 0;
+
     for(int i = 0; i < n; i++){
-        if(mincut && merge_sets[i].empty()){
-                continue;
+        if(!valid_node[i]){
+            continue;
         }
 
         for(int j = i+1; j < n; j++){
@@ -40,26 +49,31 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
             }
         }
     }
+    cut_val_phase = cut_val;
 
     double mincut_val = cut_val;
     
     auto solution = local_solution;
 
     for(int i = 0; i < n; i++){
-        auto max_index = max_element(maxback_val.begin(), maxback_val.end());
+        auto max_index = max_element(maxback_val.begin(), maxback_val.end()); //ponteiro para o valor
 
-        auto max_value = std::distance(maxback_val.begin(), max_index);
+        auto max_value = distance(maxback_val.begin(), max_index); //o nó em si
 
         local_solution.push_back(max_value);
         connected[max_value] = true;
 
         cut_val = cut_val + 2 - 2 * (*max_index);
 
+        if(cut_val < EPSILON){ //trocar o recalculo por isso, caso de errado volta pra calcular do 0
+            cut_val = 0;
+        }
+
         maxback_val[max_value] = 0;
 
         for(int j = 0; j < n; j++){ //atualizar o max_back
             
-            if(mincut && merge_sets[j].empty()){
+            if(!valid_node[j]){
                 maxback_val[j] = 0;
                 continue;
             } 
@@ -68,22 +82,6 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
                     maxback_val[j] += x[max_value][j];
                 } else{
                     maxback_val[j] += x[j][max_value];
-                }
-            }
-        }
-
-        if(cut_val < EPSILON && mincut && (i == n - 1)){
-            cut_val = 0;
-
-            for(int i = 0; i < n; i++){
-                if(mincut && merge_sets[i].empty()){
-                    continue;
-                }
-
-                for(int j = i+1; j < n; j++){
-                    if(connected[i] && !connected[j]){ 
-                        cut_val += x[i][j];
-                    }
                 }
             }
         }
@@ -143,7 +141,7 @@ vector <vector<int> > MaxBack(double** x, int n){
     return subtours;
 }
 
-void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<vector<int>>& merge_sets, vector<int>& disjointed_set){
+void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<vector<int>>& merge_sets){
 
     int s = max_back_tour.back();
     //cout << "s: " << s;
