@@ -65,7 +65,7 @@ void MyCutCallback::main()
 	cutSetPool = MaxBack(x_edge, n);
 	
 	if (cutSetPool.empty() && depth <= 7) {
-
+		//cout << "MINCUT:\n";
 		cutSetPool = MinCut(x_edge, n);
 	}
 

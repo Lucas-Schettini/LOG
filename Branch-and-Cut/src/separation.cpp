@@ -7,28 +7,41 @@
 #include <vector>
 #include <queue>
 
-pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bool>& visited, bool mincut = 0, vector<vector<int>> merge_sets = {{}}){
+pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<char>& visited, bool mincut = 0, vector<vector<int>> merge_sets = {{}},
+                                        vector<int> disjointed_set = {}){
 
-    vector<bool> connected(n, 0);
+    vector<char> connected(n, 0);
     connected[init] = true;
 
     vector<int> local_solution = {init};
 
     vector <double> maxback_val(n, 0); //variável que diz as conexões internas
 
-    vector<bool> valid_node(n, true);
+    // vector<char> valid_node(n, true);
+    // if (mincut) {
+    //     for (size_t i = 0; i < n; i++) {
+    //         valid_node[i] = !merge_sets[i].empty();
+    //     }
+    // }
+
+    vector<char> valid_node(n, true);
+    vector<int> counted = disjointed_set;
     if (mincut) {
-        for (int i = 0; i < n; i++) {
-            valid_node[i] = !merge_sets[i].empty();
+        for (size_t i = 0; i < n; i++) {
+            for(size_t j = 0; j < n; j++){
+                if(counted[j] == disjointed_set[i]){
+                    valid_node[i] = false;
+                }
+            }
         }
     }
     
-    for(int i = 0; i < n; i++){
+    for(size_t i = 0; i < n; i++){
         if(connected[i]){
             if(!valid_node[i]){
                 continue;
             } 
-            for(int j = i + 1; j < n; j++){
+            for(size_t j = i + 1; j < n; j++){
                 maxback_val[j] += x[i][j]; 
             }
         }
@@ -36,29 +49,27 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
     }
 
     double cut_val = 0; // variável que diz o somatório de todas as conexões dos que não estão conectados com a solução
-    double cut_val_phase = 0;
 
-    for(int i = 0; i < n; i++){
+    for(size_t i = 0; i < n; i++){
         if(!valid_node[i]){
             continue;
         }
 
-        for(int j = i+1; j < n; j++){
+        for(size_t j = i+1; j < n; j++){
             if(connected[i] && !connected[j]){ 
                 cut_val += x[i][j];
             }
         }
     }
-    cut_val_phase = cut_val;
 
     double mincut_val = cut_val;
     
-    auto solution = local_solution;
+    vector<int> solution = local_solution;
 
-    for(int i = 0; i < n; i++){
+    for(size_t i = 0; i < n; i++){
         auto max_index = max_element(maxback_val.begin(), maxback_val.end()); //ponteiro para o valor
 
-        auto max_value = distance(maxback_val.begin(), max_index); //o nó em si
+        int max_value = distance(maxback_val.begin(), max_index); //o nó em si
 
         local_solution.push_back(max_value);
         connected[max_value] = true;
@@ -105,18 +116,8 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<bo
 vector <vector<int> > MaxBack(double** x, int n){
 
     vector<vector <int>> subtours;
-    //cout << "matriz: \n";
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            if(x[i][j] < EPSILON){
-                x[i][j] = 0;
-            }
-            //cout << x[i][j] << " ";
-        }
-        //cout << "\n";
-    }
 
-    vector<bool> visited(n,0);
+    vector<char> visited(n,0);
 
     int next = 0;
 
@@ -130,7 +131,7 @@ vector <vector<int> > MaxBack(double** x, int n){
             }
         }
 
-        if(visited == vector<bool> (n,1)){
+        if(visited == vector<char> (n,1)){
             break;
         }
     }
@@ -141,12 +142,11 @@ vector <vector<int> > MaxBack(double** x, int n){
     return subtours;
 }
 
-void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<vector<int>>& merge_sets){
+void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour,vector<vector<int>> solution ,vector<int>& disjointed_set){
 
     int s = max_back_tour.back();
-    //cout << "s: " << s;
+    
     int t = max_back_tour[max_back_tour.size()-2];
-    //cout << " t: " << t << endl;
 
     int temp = t;
     
@@ -154,12 +154,13 @@ void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<
         t = s;
         s = temp;
     }
-    
+    // cout << "s: " << s;
+    // cout << " t: " << t << endl;
     x_mincut[s][t] = 0;
     //x_mincut[t][s] = 0;
     
     for(int i = 0; i < t; i++){
-        for(int j = i+1; j < n; j++){
+        for(int j = i+1; j < t; j++){
             if(i == s){
                 x_mincut[i][j] = x_mincut[s][j] + x_mincut[t][j];
             }else if(i == t){
@@ -180,53 +181,68 @@ void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour, vector<
         }
     }
 
-    for(int i = 0; i < merge_sets.size(); i++){ //talvez não precise começar do 0, usar um vector remaining pode resolver 
-        for(int j = 0; j < merge_sets[i].size(); j++){
-            if(merge_sets[i][j] == s){
-                for(auto a : merge_sets[t]){
-                    merge_sets[i].push_back(a);
-                }
-                merge_sets[t].clear();
-                return;
-            }
+    for(int i = 0; i < n; i++){
+        if(disjointed_set[i] == s){
+            disjointed_set[t] = s;
         }
+        if(disjointed_set[i] == t){
+            disjointed_set[i] = s;
+        }
+        
+        solution.push_back({});
+        
     }
+
+    // for(int i = 0; i < merge_sets.size(); i++){ //talvez não precise começar do 0, usar um vector remaining pode resolver 
+    //     for(int j = 0; j < merge_sets[i].size(); j++){
+    //         if(merge_sets[i][j] == s){
+    //             for(auto a : merge_sets[t]){
+    //                 merge_sets[i].push_back(a);
+    //             }
+    //             merge_sets[t].clear();
+    //             return;
+    //         }
+    //     }
+    // }
 }
 
 vector <vector<int> > MinCut(double** x, int n){
 
     double mincut_val = 999999;
     vector<vector<int>> subtours;
-    vector <int> tour;
 
-    vector<bool> visited (n,0);
+    vector<char> visited (n,0);
 
     vector<vector<int>> merge_sets(n); 
     vector<int> disjointed_set(n,0); //tentar fazer uma disjointed set parecida com a que existe no kruskal!
 
     for(int i = 0; i < n; i++){
-        merge_sets[i].push_back(i);
-        disjointed_set.push_back(0);
+        //merge_sets[i].push_back(i);
+        disjointed_set[i] = i;
     }
 
     for(int i = 0; i < n; i++){
 
-        auto local_solution = OneTourMaxBack(n, x , 0, visited, 1, merge_sets);
+        pair<vector<int>,double> local_solution = OneTourMaxBack(n, x , 0, visited, 1, merge_sets, disjointed_set);
 
-        auto max_back_tour = local_solution.first;
+        vector<int> max_back_tour = local_solution.first;
 
-        auto cut_val = local_solution.second;
+        double cut_val = local_solution.second;
 
         if(cut_val < mincut_val){
             mincut_val = cut_val;
             
-            subtours = merge_sets;   
+            subtours = merge_sets; // a solução tem que ser construida   
         }
 
         if(merge_sets[0].size() != n){
-            Shrink(x, n, max_back_tour, merge_sets);
+            Shrink(x, n, max_back_tour, merge_sets, disjointed_set);
         }        
 
+    }
+
+    if(subtours.size() == n){
+        return {};
     }
 
     vector<vector<int>> subtours_clean;
