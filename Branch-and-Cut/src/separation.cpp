@@ -25,13 +25,10 @@ pair<vector<int>, double> OneTourMaxBack(int n, double ** x, int init, vector<ch
     // }
 
     vector<char> valid_node(n, true);
-    vector<int> counted = disjointed_set;
     if (mincut) {
         for (size_t i = 0; i < n; i++) {
-            for(size_t j = 0; j < n; j++){
-                if(counted[j] == disjointed_set[i]){
-                    valid_node[i] = false;
-                }
+            if(disjointed_set[i] != i){
+                valid_node[i] = false;
             }
         }
     }
@@ -142,7 +139,7 @@ vector <vector<int> > MaxBack(double** x, int n){
     return subtours;
 }
 
-void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour,vector<vector<int>> solution ,vector<int>& disjointed_set){
+void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour,vector<vector<int>>& merge_sets ,vector<int>& disjointed_set){
 
     int s = max_back_tour.back();
     
@@ -159,39 +156,54 @@ void Shrink(double ** x_mincut, int n, const vector<int>& max_back_tour,vector<v
     x_mincut[s][t] = 0;
     //x_mincut[t][s] = 0;
     
-    for(int i = 0; i < t; i++){
-        for(int j = i+1; j < t; j++){
-            if(i == s){
-                x_mincut[i][j] = x_mincut[s][j] + x_mincut[t][j];
-            }else if(i == t){
-                if(j < t){
-                    x_mincut[i][j] = x_mincut[j][s];
-                } else {
-                    x_mincut[i][j] = x_mincut[s][j]; 
-                }
-            }else if(j == s){
-                x_mincut[i][j] = x_mincut[i][s] + x_mincut[i][t];
-            }else if(j == t){
-                if(i < s){
-                    x_mincut[i][j] = x_mincut[i][s]; 
-                } else {
-                    x_mincut[i][j] = x_mincut[s][i];    
-                }
-            }
-        }
+    // for(int i = 0; i < t; i++){
+    //     for(int j = i+1; j < t; j++){
+    //         if(i == s){
+    //             x_mincut[i][j] = x_mincut[s][j] + x_mincut[t][j];
+    //         }else if(i == t){
+    //             if(j < t){
+    //                 x_mincut[i][j] = x_mincut[j][s];
+    //             } else {
+    //                 x_mincut[i][j] = x_mincut[s][j]; 
+    //             }
+    //         }else if(j == s){
+    //             x_mincut[i][j] = x_mincut[i][s] + x_mincut[i][t];
+    //         }else if(j == t){
+    //             if(i < s){
+    //                 x_mincut[i][j] = x_mincut[i][s]; 
+    //             } else {
+    //                 x_mincut[i][j] = x_mincut[s][i];    
+    //             }
+    //         }
+    //     }
+    // }
+
+    for (int i = 0; i < n; i++) {
+        if (i == s || i == t) continue;
+        x_mincut[s][i] += x_mincut[t][i];
+        x_mincut[i][s] = x_mincut[s][i];
     }
 
-    for(int i = 0; i < n; i++){
-        if(disjointed_set[i] == s){
-            disjointed_set[t] = s;
-        }
-        if(disjointed_set[i] == t){
-            disjointed_set[i] = s;
-        }
-        
-        solution.push_back({});
-        
+    for (int i = 0; i < n; i++) {
+        x_mincut[t][i] = 0;
+        x_mincut[i][t] = 0;
     }
+
+    // for(int i = 0; i < n; i++){
+    //     if(disjointed_set[i] == s){
+    //         disjointed_set[t] = s;
+    //     }
+    //     if(disjointed_set[i] == t){
+    //         disjointed_set[i] = s;
+    //     }        
+    // }
+
+    for(int v : merge_sets[t]){
+        merge_sets[s].push_back(v);
+        disjointed_set[v] = s;
+    }
+    merge_sets[t].clear();
+    disjointed_set[t] = s;
 
     // for(int i = 0; i < merge_sets.size(); i++){ //talvez não precise começar do 0, usar um vector remaining pode resolver 
     //     for(int j = 0; j < merge_sets[i].size(); j++){
@@ -217,7 +229,7 @@ vector <vector<int> > MinCut(double** x, int n){
     vector<int> disjointed_set(n,0); //tentar fazer uma disjointed set parecida com a que existe no kruskal!
 
     for(int i = 0; i < n; i++){
-        //merge_sets[i].push_back(i);
+        merge_sets[i].push_back(i);
         disjointed_set[i] = i;
     }
 
@@ -231,8 +243,19 @@ vector <vector<int> > MinCut(double** x, int n){
 
         if(cut_val < mincut_val){
             mincut_val = cut_val;
+
+            int s = max_back_tour[max_back_tour.size() - 2];
+            int t = max_back_tour.back();
+
+            if (disjointed_set[t] != t)
+                t = disjointed_set[t];
+            if (disjointed_set[s] != s)
+                s = disjointed_set[s];
+
+            subtours = { merge_sets[t] };
+
             
-            subtours = merge_sets; // a solução tem que ser construida   
+            //subtours = merge_sets; // a solução tem que ser construida   
         }
 
         if(merge_sets[0].size() != n){
@@ -245,15 +268,15 @@ vector <vector<int> > MinCut(double** x, int n){
         return {};
     }
 
-    vector<vector<int>> subtours_clean;
+    // vector<vector<int>> subtours_clean;
 
-    for(int i = 0; i < subtours.size(); i ++){
-        if(!subtours[i].empty()){
-            subtours_clean.push_back(subtours[i]);
-        }
-    }
+    // for(int i = 0; i < subtours.size(); i ++){
+    //     if(!subtours[i].empty()){
+    //         subtours_clean.push_back(subtours[i]);
+    //     }
+    // }
 
-    return subtours_clean;
+    return subtours;
 }
 
 
