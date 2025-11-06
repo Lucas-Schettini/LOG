@@ -1,6 +1,7 @@
 #include <ilcplex/ilocplex.h>
 #include <vector>
 #include <cstdlib>
+#include "combo.c"
 
 #define EPISLON = 1e-6;
 
@@ -52,23 +53,25 @@ int main() {
     //while(true){
         IloNumArray pi(env, n);
 
-        rmp.getDuals(pi, partition_constraint); //não seriam "m" pis? m = numero do restrições
+        rmp.getDuals(pi, partition_constraint);
 
         for (size_t i = 0; i < n; i++){
 			cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
 		}
 
+        //auto z = combo(, , capacity, 0, 9999999, true, true); //DEFINIR os Items do combo
+
         IloEnv sub_env;
         IloModel sub(sub_env);
 
-        IloNumVarArray x_knapsack(sub_env, pi);
+        IloNumVarArray x_knapsack(sub_env, n, 0, IloInfinity);
 
         IloExpr sub_sum_obj(sub_env); 
-        IloRangeArray sub_partition_constraint(sub_env);
+        IloRangeArray sub_constraint(sub_env); 
 
         for (int i = 0; i < n; i++){
-            sub_sum_obj += ;
-            partition_constraint.add(lambda[i] == 1);
+            sub_sum_obj += pi[i] * x_knapsack[i];
+            sub_constraint.add((weight[i]*x_knapsack[i]) < capacity); //tem que ver a forma certa de adicionar a constraint 
 	    }
     //}
 
