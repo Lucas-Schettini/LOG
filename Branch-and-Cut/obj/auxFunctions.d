@@ -1,1 +1,2 @@
-obj/auxFunctions.o: src/auxFunctions.cpp src/auxFunctions.h
+-MM
+src/auxFunctions.cpp

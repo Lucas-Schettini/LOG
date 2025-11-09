@@ -1,2 +1,2 @@
-obj/MyBranchCallback.o: src/MyBranchCallback.cpp src/NodeInfo.h \
- src/MyBranchCallback.h
+-MM
+src/MyBranchCallback.cpp
