@@ -1,17 +1,19 @@
 #include <ilcplex/ilocplex.h>
 #include <vector>
 #include <cstdlib>
+#include <stack>
 
 #include "combo.c"
 #include "data.h"
 
 using namespace std;
 
-int main(int argc, char** argv) {
+typedef struct Node{
+    IloCplex solver;
+    IloNumVarArray lambdas;
+};
 
-    Data data;
-    data.readFile(argv[1]);
-
+Node ColumnGeneration(Data data){
     double M = 1e6;
 
     vector<int> weight = data.weights/*{3, 4, 5, 8, 9}*/;
@@ -42,6 +44,7 @@ int main(int argc, char** argv) {
     master.add(master_objective);
 
     IloCplex rmp(master);
+    //rmp.exportModel("init.lp");
     
     rmp.setOut(env.getNullStream()); // disables CPLEX log
     rmp.solve();
@@ -68,14 +71,15 @@ int main(int argc, char** argv) {
         item items[n];
 
         for(int i = 0; i < n; i++){
-            items[i].p = (itype)(pi[i]); //coeficiente do x
+            items[i].p = (itype)(pi[i] * M); //coeficiente do x
             items[i].w = (itype)(weight[i]); //peso
             items[i].x = 0; //solução inicial
             items[i].index = i; //posição
         }
 
-        stype z = combo(items, items + n - 1, capacity, 0, 9999999, true, true); //DEFINIR os Items do combo
-        z = (stype)(1 - z);
+        double z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
+        z = (1 - z);
+
         // IloEnv sub_env;
         // IloModel sub(sub_env);
 
@@ -87,7 +91,7 @@ int main(int argc, char** argv) {
 
         // for (int i = 0; i < n; i++){
         //     sub_sum_obj += pi[i] * x_knapsack[i];
-        //     sub_weight += weight[i]*x_knapsack[i]; 
+        //     sub_weight += weight[i] * x_knapsack[i]; 
 	    // }
         // sub_sum_obj = 1 - sub_sum_obj;
         // sub_constraint.add(sub_weight <= capacity);
@@ -100,17 +104,16 @@ int main(int argc, char** argv) {
         // sub_cplex.setOut(env.getNullStream());
         // sub_cplex.solve();
 
-        //cout << "Valor sub: " << z << endl;
+        // cout << "Valor sub(combo): " << z << endl;
+        // cout << "Valor sub(cplex): " << sub_cplex.getObjValue() << endl;
 
-        if(/*sub_cplex.getObjValue() < -1e-6*/ z < -1e-6){
-            //cout << "Valor sub: " << sub_cplex.getObjValue() << endl;
+        if(z < -1e-6){
 
             IloNumArray entering_col(env, n);
-            //sub_cplex.getValues(x_knapsack, entering_col);
 
             //cout << endl << "Entering column:" << endl;
 			for (size_t i = 0; i < n; i++){
-                entering_col[items[i].index] = items[i].x;
+                entering_col[items[i].index] = items[i].x; //coluna usando combo
 				//cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
 			}
 			//cout << endl;
@@ -118,19 +121,72 @@ int main(int argc, char** argv) {
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
+            //rmp.exportModel("a.lp");
+
             rmp.solve(); //resolver de novo com a nova coluna
 
-            //cout << "New LB: " << rmp.getObjValue() << endl;
-
         } else{
-            cout << "Daqui não melhora." << endl;
+            //cout << "Daqui não melhora." << endl;
             break;
         }
     }
-
     cout << "Bins: " << rmp.getObjValue() << endl;
 
-    cout << "Time: " << rmp.getCplexTime() << endl;
+    // cout << "Solução: ";
+    // for(int i = 0; i < lambda.getSize(); i++){
+    //     cout << rmp.getValue(lambda[i]) << " ";
+    // } cout << endl;
+
+    Node solution;
+    solution.solver = rmp;
+    solution.lambdas = lambda;
+
+    return solution;
+}
+
+int main(int argc, char** argv) {
+
+    Data data;
+    data.readFile(argv[1]);
+
+    vector<int> weight = data.weights/*{3, 4, 5, 8, 9}*/; //ta repetido isso lá na função, dps resolve
+    int capacity = data.capacity/*10*/;
+    int n = data.n/*weight.size()*/;
+
+    Node root = ColumnGeneration(data);
+
+    cout << "Time: " << root.getCplexTime() << endl; //ta errado esse tempo
+
+    stack<Node> tree;
+    tree.push(root);
+
+    double ub = 9999999;
+
+    while(!tree.empty()){
+        Node node = tree.top();
+        tree.pop();
+
+        if(node.getObjValue() > ub){
+            continue;
+        }
+
+        IloNumVarArray node_lambdas;
+        node.getValues(node_lambdas);
+
+        for(int i = 0; i < node.get; i++){
+            
+        }
+
+        if(node.getNintVars() == n){ //feasible solution (não é assim, tem que fazer o for olhando cada variável)
+            if(node.getObjValue() < ub){
+                ub = node.getObjValue();
+            }
+        } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lamdas) que eles existem e procurar o mais fracionário)
+            
+        }
+
+        break;
+    }
 
     return 0;
 }
