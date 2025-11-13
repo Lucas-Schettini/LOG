@@ -2,23 +2,88 @@
 #include <vector>
 #include <cstdlib>
 #include <stack>
+#include <unordered_set>
+#include <cmath>
 
 #include "combo.c"
 #include "data.h"
 
 using namespace std;
 
-typedef struct Node{
-    IloCplex solver;
-    IloNumVarArray lambdas;
+struct Node{
+    double bins;
+    vector<double> lambdas;
+    vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
 };
 
-Node ColumnGeneration(Data data){
+struct Knapsack{
+    double obj_value;
+    vector<bool> solution;
+    IloNumArray entering_col;
+}
+
+Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi){
+    IloEnv sub_env;
+    IloModel sub(sub_env);
+
+    IloNumVarArray x_knapsack(sub_env, n, 0, IloInfinity);
+
+    IloExpr sub_sum_obj(sub_env); 
+    IloExpr sub_weight(sub_env);
+    IloRangeArray sub_constraint(sub_env); 
+
+    for (int i = 0; i < n; i++){
+        sub_sum_obj += pi[i] * x_knapsack[i];
+        sub_weight += weight[i] * x_knapsack[i]; 
+    }
+    sub_sum_obj = 1 - sub_sum_obj;
+    sub_constraint.add(sub_weight <= capacity);
+
+    sub.add(sub_constraint);
+    IloObjective sub_objective = IloMinimize(sub_env, sub_sum_obj);
+    sub.add(sub_objective);
+
+    IloCplex sub_cplex(sub);
+    sub_cplex.setOut(sub_env.getNullStream());
+    sub_cplex.solve();
+
+    vector<bool> solution;
+
+    for (size_t j = 0; j < x_knapsack.getSize(); j++){
+		solution.push_back(sub_cplex.getValue(x_knapsack[j]));
+	}
+
+    Knapsack knapsack;
+
+    knapsack.obj_value = sub_cplex.getObjValue();
+    knapsack.solution = solution;
+    knapsack.entering_col = sub_cplex.getValues(x_knapsack, entering_col);
+
+    return knapsack;
+}
+
+Node ColumnGeneration(Data& data, bool root){
+
+    Node node;
+
     double M = 1e6;
 
     vector<int> weight = data.weights/*{3, 4, 5, 8, 9}*/;
     int capacity = data.capacity/*10*/;
     int n = data.n/*weight.size()*/;
+
+    vector<vector<bool>> pattern(n, vector<bool> (n , 0));
+
+    vector<bool> column(n,0);
+    for(int i = 0; i < n; i++){
+        column[i] = 1;
+        if(i >= 1){
+            column[i-1] = 0;
+        }
+        for(int j = 0; j < n; j++){
+            pattern[i][j] = column[j];
+        }
+    }
 
     IloEnv env;
     IloModel master(env);
@@ -59,64 +124,64 @@ Node ColumnGeneration(Data data){
 
     int count = 0;
 
+    vector<vector<bool>> new_patterns;
+
     while(true){
         IloNumArray pi(env, n);
 
         rmp.getDuals(pi, partition_constraint);
 
-        for (size_t i = 0; i < n; i++){
-			//cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
-		}
-
+        // for (size_t i = 0; i < n; i++){
+		//     cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
+		// }
+        double z;
         item items[n];
+        Knapsack cplex_knap;
 
-        for(int i = 0; i < n; i++){
-            items[i].p = (itype)(pi[i] * M); //coeficiente do x
-            items[i].w = (itype)(weight[i]); //peso
-            items[i].x = 0; //solução inicial
-            items[i].index = i; //posição
+        if(root){
+
+            for(int i = 0; i < n; i++){
+                items[i].p = (itype)(pi[i] * M); //coeficiente do x (multiplicar por M para tirar a imprecisão)
+                items[i].w = (itype)(weight[i]); //peso
+                items[i].x = 0; //solução inicial
+                items[i].index = i; //posição
+            }
+
+            z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
+            z = (1 - z);
+        } else{
+            cplex_knap = SolveKnapsack(n, capacity, weight, pi);
         }
-
-        double z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
-        z = (1 - z);
-
-        // IloEnv sub_env;
-        // IloModel sub(sub_env);
-
-        // IloNumVarArray x_knapsack(sub_env, n, 0, IloInfinity);
-
-        // IloExpr sub_sum_obj(sub_env); 
-        // IloExpr sub_weight(sub_env);
-        // IloRangeArray sub_constraint(sub_env); 
-
-        // for (int i = 0; i < n; i++){
-        //     sub_sum_obj += pi[i] * x_knapsack[i];
-        //     sub_weight += weight[i] * x_knapsack[i]; 
-	    // }
-        // sub_sum_obj = 1 - sub_sum_obj;
-        // sub_constraint.add(sub_weight <= capacity);
-
-        // sub.add(sub_constraint);
-        // IloObjective sub_objective = IloMinimize(sub_env, sub_sum_obj);
-        // sub.add(sub_objective);
-
-        // IloCplex sub_cplex(sub);
-        // sub_cplex.setOut(env.getNullStream());
-        // sub_cplex.solve();
 
         // cout << "Valor sub(combo): " << z << endl;
         // cout << "Valor sub(cplex): " << sub_cplex.getObjValue() << endl;
 
-        if(z < -1e-6){
+        if(root){
+            vector<bool> knapsack_sol(n, 0);
+            for(int i = 0; i < n; i++){
+                knapsack_sol[items[i].index] = items[i].x;
+            }
+            new_patterns.push_back(knapsack_sol); //inserir o padrão do lamda[i]    
+        }else{
+            new_patterns.push_back(cplex_knap.solution);
+        }
+
+        bool improvment = (root && z < -1e-6) || (!root && cplex_knap.obj_value < -1e6);
+
+        if(improvment){
 
             IloNumArray entering_col(env, n);
 
             //cout << endl << "Entering column:" << endl;
-			for (size_t i = 0; i < n; i++){
-                entering_col[items[i].index] = items[i].x; //coluna usando combo
-				//cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
-			}
-			//cout << endl;
+            if(root){
+                for (size_t i = 0; i < n; i++){
+                    entering_col[items[i].index] = items[i].x;
+				    cout << (entering_col[i]) << " ";
+			    }
+            } else{
+                entering_col = cplex_knap.entering_col;
+            }
+			cout << endl;
 
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
@@ -129,19 +194,41 @@ Node ColumnGeneration(Data data){
             //cout << "Daqui não melhora." << endl;
             break;
         }
+
+        // count++;
     }
     cout << "Bins: " << rmp.getObjValue() << endl;
 
-    // cout << "Solução: ";
-    // for(int i = 0; i < lambda.getSize(); i++){
-    //     cout << rmp.getValue(lambda[i]) << " ";
-    // } cout << endl;
+    //vector<pair<int,int>> possible_pairs(lambda.getSize());
 
-    Node solution;
-    solution.solver = rmp;
-    solution.lambdas = lambda;
+    node.bins = rmp.getObjValue();
+    vector<double> solution(lambda.getSize());
 
-    return solution;
+    cout << "Padrões dos Lambdas: \n";
+
+    for(int i = 0; i < lambda.getSize(); i++){
+        solution[i] = rmp.getValue(lambda[i]);
+    }
+
+    vector<bool> teste = {1,1,1,1,1};
+
+    for(int i = 0; i < lambda.getSize() - 5; i++){
+        pattern.push_back(new_patterns[i]);
+        //pattern.push_back(teste);
+    }
+
+    for(int i = 0; i < pattern.size(); i++){
+        cout << "Lambda " << i << ": ";
+        for(int j = 0; j < pattern[i].size(); j++){
+            cout << pattern[i][j] << " "; 
+        }
+        cout << endl;
+    }
+    
+    node.lambdas = solution;
+    node.pattern = pattern;
+
+    return node;
 }
 
 int main(int argc, char** argv) {
@@ -153,9 +240,12 @@ int main(int argc, char** argv) {
     int capacity = data.capacity/*10*/;
     int n = data.n/*weight.size()*/;
 
-    Node root = ColumnGeneration(data);
+    Node root = ColumnGeneration(data, false); //COLOCAR O TRUE DEPOIS!!!!!!!!!!
 
-    cout << "Time: " << root.getCplexTime() << endl; //ta errado esse tempo
+    cout << "Solução: ";
+    for(int i = 0; i < root.lambdas.size(); i++){
+        cout << root.lambdas[i] << " ";
+    } cout << endl;
 
     stack<Node> tree;
     tree.push(root);
@@ -166,23 +256,53 @@ int main(int argc, char** argv) {
         Node node = tree.top();
         tree.pop();
 
-        if(node.getObjValue() > ub){
+        if(node.bins > ub){
             continue;
         }
 
-        IloNumVarArray node_lambdas;
-        node.getValues(node_lambdas);
+        bool feasible = true;
 
-        for(int i = 0; i < node.get; i++){
-            
+        for(int i = 0; i < node.lambdas.size(); i++){
+            if((node.lambdas[i] < 1 - 1e-6) && (node.lambdas[i] > 0 + 1e-6)){ 
+                feasible = false;
+            } 
         }
 
-        if(node.getNintVars() == n){ //feasible solution (não é assim, tem que fazer o for olhando cada variável)
-            if(node.getObjValue() < ub){
-                ub = node.getObjValue();
+        if(feasible){
+            if(node.bins < ub){
+                ub = node.bins;
             }
-        } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lamdas) que eles existem e procurar o mais fracionário)
-            
+        } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
+            double frac_sum = 0;
+            double most_frac = 0;
+            pair<int,int> chosen;
+            bool break_flag = false;
+
+            for(int i = 0; i < node.lambdas.size(); i++){ // item 1
+                for(int j = i + 1; j < node.lambdas.size(); j++){ // item 2
+                    for(int k = n; k < node.lambdas.size(); k++){ // olhar dentro do lambda e ver se tem o par
+                        if(node.pattern[k][i] && node.pattern[k][j]){
+                            frac_sum =+ node.lambdas[k];
+                        }
+                    }
+                    if(abs(frac_sum - 0.5) == 1e6){
+                        chosen.first = i;
+                        chosen.second = j;
+                        break_flag = true;
+                        break;
+                    }
+                    if(abs(0.5 - frac_sum) < abs(0.5 - most_frac)){
+                        most_frac = frac_sum;
+                        chosen.first = i;
+                        chosen.second = j;
+                    }
+                }
+                if(break_flag){
+                    break;
+                }
+            }
+
+
         }
 
         break;
