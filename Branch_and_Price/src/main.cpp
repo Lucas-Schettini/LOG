@@ -19,28 +19,27 @@ struct Node{
 struct Knapsack{
     double obj_value;
     vector<bool> solution;
-    IloNumArray entering_col;
-}
+};
 
 Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi){
     IloEnv sub_env;
     IloModel sub(sub_env);
 
-    IloNumVarArray x_knapsack(sub_env, n, 0, IloInfinity);
+    IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
 
-    IloExpr sub_sum_obj(sub_env); 
+    IloExpr reduced_cost(sub_env); 
     IloExpr sub_weight(sub_env);
     IloRangeArray sub_constraint(sub_env); 
 
     for (int i = 0; i < n; i++){
-        sub_sum_obj += pi[i] * x_knapsack[i];
+        reduced_cost -= 1e6 * pi[i] * x_knapsack[i]; //correção numérica
         sub_weight += weight[i] * x_knapsack[i]; 
     }
-    sub_sum_obj = 1 - sub_sum_obj;
+    //sub_sum_obj = 1 - sub_sum_obj;
     sub_constraint.add(sub_weight <= capacity);
 
     sub.add(sub_constraint);
-    IloObjective sub_objective = IloMinimize(sub_env, sub_sum_obj);
+    IloObjective sub_objective = IloMinimize(sub_env, 1 + reduced_cost);
     sub.add(sub_objective);
 
     IloCplex sub_cplex(sub);
@@ -53,11 +52,14 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
 		solution.push_back(sub_cplex.getValue(x_knapsack[j]));
 	}
 
+    // for(int i = 0; i < solution.size(); i++){
+    //     cout << solution[i] << " ";
+    // } cout << endl;
+
     Knapsack knapsack;
 
-    knapsack.obj_value = sub_cplex.getObjValue();
+    knapsack.obj_value = sub_cplex.getObjValue()/1e6; //retirar 1e6 para o valor
     knapsack.solution = solution;
-    knapsack.entering_col = sub_cplex.getValues(x_knapsack, entering_col);
 
     return knapsack;
 }
@@ -109,7 +111,7 @@ Node ColumnGeneration(Data& data, bool root){
     master.add(master_objective);
 
     IloCplex rmp(master);
-    //rmp.exportModel("init.lp");
+    rmp.exportModel("init.lp");
     
     rmp.setOut(env.getNullStream()); // disables CPLEX log
     rmp.solve();
@@ -166,27 +168,31 @@ Node ColumnGeneration(Data& data, bool root){
             new_patterns.push_back(cplex_knap.solution);
         }
 
-        bool improvment = (root && z < -1e-6) || (!root && cplex_knap.obj_value < -1e6);
+        bool improvment = (root && z < -1e-6) || (!root && cplex_knap.obj_value < -1e-6);
 
         if(improvment){
 
             IloNumArray entering_col(env, n);
 
-            //cout << endl << "Entering column:" << endl;
+            cout << endl << "Entering column:" << endl;
             if(root){
                 for (size_t i = 0; i < n; i++){
                     entering_col[items[i].index] = items[i].x;
 				    cout << (entering_col[i]) << " ";
 			    }
             } else{
-                entering_col = cplex_knap.entering_col;
+                //entering_col = cplex_knap.entering_col;
+                for (size_t i = 0; i < n; i++){
+                    entering_col[i] = cplex_knap.solution[i];
+				    cout << (entering_col[i]) << " ";
+			    }
             }
 			cout << endl;
 
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
-            //rmp.exportModel("a.lp");
+            rmp.exportModel("a.lp");
 
             rmp.solve(); //resolver de novo com a nova coluna
 
@@ -197,7 +203,7 @@ Node ColumnGeneration(Data& data, bool root){
 
         // count++;
     }
-    cout << "Bins: " << rmp.getObjValue() << endl;
+    cout << "Bins: " << rmp.getObjValue()/1e6 << endl;
 
     //vector<pair<int,int>> possible_pairs(lambda.getSize());
 
@@ -247,6 +253,8 @@ int main(int argc, char** argv) {
         cout << root.lambdas[i] << " ";
     } cout << endl;
 
+    return 0;
+
     stack<Node> tree;
     tree.push(root);
 
@@ -285,7 +293,7 @@ int main(int argc, char** argv) {
                             frac_sum =+ node.lambdas[k];
                         }
                     }
-                    if(abs(frac_sum - 0.5) == 1e6){
+                    if(abs(frac_sum - 0.5) == 1e-6){
                         chosen.first = i;
                         chosen.second = j;
                         break_flag = true;

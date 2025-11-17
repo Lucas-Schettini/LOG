@@ -1,1 +1,2 @@
-obj/data.o: src/data.cpp src/data.h
+-MM
+src/data.cpp
