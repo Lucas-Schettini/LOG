@@ -4,12 +4,12 @@ BITS_OPTION = -m64
 ####diretorios com as libs do cplex
 
 #usar isso só no notebook
-CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2212/cplex
-CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2212/concert
+# CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2212/cplex
+# CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2212/concert
 
 #usar isso só no pc
-# CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2211/cplex
-# CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2211/concert
+CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2211/cplex
+CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2211/concert
 
 CPLEXLIBDIR   = $(CPLEXDIR)/lib/x86-64_linux/static_pic
 CONCERTLIBDIR = $(CONCERTDIR)/lib/x86-64_linux/static_pic

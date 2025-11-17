@@ -4,6 +4,7 @@
 #include <stack>
 #include <unordered_set>
 #include <cmath>
+#include <chrono>
 
 #include "combo.c"
 #include "data.h"
@@ -21,18 +22,24 @@ struct Knapsack{
     vector<bool> solution;
 };
 
-Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi){
+Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi, pair<int,int> chosen = {-1, -1}){
     IloEnv sub_env;
     IloModel sub(sub_env);
 
     IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
+
+    if(chosen.first != -1){
+        //cout << "ENTREI AQUI\n";
+        x_knapsack[chosen.first].setUB(0.0);
+        x_knapsack[chosen.second].setUB(0.0);
+    }
 
     IloExpr reduced_cost(sub_env); 
     IloExpr sub_weight(sub_env);
     IloRangeArray sub_constraint(sub_env); 
 
     for (int i = 0; i < n; i++){
-        reduced_cost -= 1e6 * pi[i] * x_knapsack[i]; //correção numérica
+        reduced_cost -= pi[i] * x_knapsack[i]; //correção numérica
         sub_weight += weight[i] * x_knapsack[i]; 
     }
     //sub_sum_obj = 1 - sub_sum_obj;
@@ -58,13 +65,16 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
 
     Knapsack knapsack;
 
-    knapsack.obj_value = sub_cplex.getObjValue()/1e6; //retirar 1e6 para o valor
+    knapsack.obj_value = sub_cplex.getObjValue();
+    cout << "Knapsack obj: " << knapsack.obj_value << endl;
     knapsack.solution = solution;
+
+    sub_env.end();
 
     return knapsack;
 }
 
-Node ColumnGeneration(Data& data, bool root){
+Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
 
     Node node;
 
@@ -111,8 +121,8 @@ Node ColumnGeneration(Data& data, bool root){
     master.add(master_objective);
 
     IloCplex rmp(master);
-    rmp.exportModel("init.lp");
-    
+    //rmp.exportModel("init.lp");
+
     rmp.setOut(env.getNullStream()); // disables CPLEX log
     rmp.solve();
 
@@ -124,8 +134,6 @@ Node ColumnGeneration(Data& data, bool root){
 	}
 	cout << endl;
 
-    int count = 0;
-
     vector<vector<bool>> new_patterns;
 
     while(true){
@@ -133,9 +141,9 @@ Node ColumnGeneration(Data& data, bool root){
 
         rmp.getDuals(pi, partition_constraint);
 
-        // for (size_t i = 0; i < n; i++){
-		//     cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
-		// }
+        for (size_t i = 0; i < n; i++){
+		    cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
+		}
         double z;
         item items[n];
         Knapsack cplex_knap;
@@ -152,7 +160,11 @@ Node ColumnGeneration(Data& data, bool root){
             z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
             z = (1 - z);
         } else{
-            cplex_knap = SolveKnapsack(n, capacity, weight, pi);
+            if(chosen.first == -1){
+                cplex_knap = SolveKnapsack(n, capacity, weight, pi);
+            }else{
+                cplex_knap = SolveKnapsack(n, capacity, weight, pi, chosen);
+            }
         }
 
         // cout << "Valor sub(combo): " << z << endl;
@@ -163,7 +175,7 @@ Node ColumnGeneration(Data& data, bool root){
             for(int i = 0; i < n; i++){
                 knapsack_sol[items[i].index] = items[i].x;
             }
-            new_patterns.push_back(knapsack_sol); //inserir o padrão do lamda[i]    
+            new_patterns.push_back(knapsack_sol); //inserir o padrão do lambda[i]    
         }else{
             new_patterns.push_back(cplex_knap.solution);
         }
@@ -174,25 +186,25 @@ Node ColumnGeneration(Data& data, bool root){
 
             IloNumArray entering_col(env, n);
 
-            cout << endl << "Entering column:" << endl;
+            //cout << endl << "Entering column:" << endl;
             if(root){
                 for (size_t i = 0; i < n; i++){
                     entering_col[items[i].index] = items[i].x;
-				    cout << (entering_col[i]) << " ";
+				    //cout << (entering_col[i]) << " ";
 			    }
             } else{
                 //entering_col = cplex_knap.entering_col;
                 for (size_t i = 0; i < n; i++){
                     entering_col[i] = cplex_knap.solution[i];
-				    cout << (entering_col[i]) << " ";
+				    //cout << (entering_col[i]) << " ";
 			    }
             }
-			cout << endl;
+			//cout << endl;
 
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
-            rmp.exportModel("a.lp");
+            //rmp.exportModel("a.lp");
 
             rmp.solve(); //resolver de novo com a nova coluna
 
@@ -203,36 +215,35 @@ Node ColumnGeneration(Data& data, bool root){
 
         // count++;
     }
-    cout << "Bins: " << rmp.getObjValue()/1e6 << endl;
-
-    //vector<pair<int,int>> possible_pairs(lambda.getSize());
+    cout << "Bins: " << rmp.getObjValue() << endl;
 
     node.bins = rmp.getObjValue();
     vector<double> solution(lambda.getSize());
 
-    cout << "Padrões dos Lambdas: \n";
+    //cout << "Padrões dos Lambdas: \n";
 
     for(int i = 0; i < lambda.getSize(); i++){
         solution[i] = rmp.getValue(lambda[i]);
     }
 
-    vector<bool> teste = {1,1,1,1,1};
+    new_patterns.pop_back(); //retirar o que sobra
 
-    for(int i = 0; i < lambda.getSize() - 5; i++){
+    for(int i = 0; i < new_patterns.size(); i++){
         pattern.push_back(new_patterns[i]);
-        //pattern.push_back(teste);
     }
 
-    for(int i = 0; i < pattern.size(); i++){
-        cout << "Lambda " << i << ": ";
-        for(int j = 0; j < pattern[i].size(); j++){
-            cout << pattern[i][j] << " "; 
-        }
-        cout << endl;
-    }
+    // for(int i = 0; i < pattern.size(); i++){
+    //     cout << "Lambda " << i << ": ";
+    //     for(int j = 0; j < pattern[i].size(); j++){
+    //         cout << pattern[i][j] << " "; 
+    //     }
+    //     cout << endl;
+    // }
     
     node.lambdas = solution;
     node.pattern = pattern;
+
+    env.end();
 
     return node;
 }
@@ -242,18 +253,18 @@ int main(int argc, char** argv) {
     Data data;
     data.readFile(argv[1]);
 
+    auto start = chrono::high_resolution_clock::now();
+
     vector<int> weight = data.weights/*{3, 4, 5, 8, 9}*/; //ta repetido isso lá na função, dps resolve
     int capacity = data.capacity/*10*/;
     int n = data.n/*weight.size()*/;
 
-    Node root = ColumnGeneration(data, false); //COLOCAR O TRUE DEPOIS!!!!!!!!!!
+    Node root = ColumnGeneration(data, true); //COLOCAR O TRUE DEPOIS!!!!!!!!!!
 
     cout << "Solução: ";
     for(int i = 0; i < root.lambdas.size(); i++){
         cout << root.lambdas[i] << " ";
     } cout << endl;
-
-    return 0;
 
     stack<Node> tree;
     tree.push(root);
@@ -310,11 +321,27 @@ int main(int argc, char** argv) {
                 }
             }
 
+            cout << "Escolhidos: " << chosen.first << " " << chosen.second << endl;
+
+            Node n1 = ColumnGeneration(data, false, chosen);
+
+            for(int i = 0; i < n1.pattern.size(); i++){
+                cout << "Lambda " << i << ": ";
+                for(int j = 0; j < n1.pattern[i].size(); j++){
+                    cout << n1.pattern[i][j] << " ";
+                }
+                cout << endl;
+            }
 
         }
 
         break;
     }
+
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> duration = end - start;
+
+    cout << "Tempo de execução: " << duration.count() << endl;
 
     return 0;
 }
