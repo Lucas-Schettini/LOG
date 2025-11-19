@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <cmath>
 #include <chrono>
+#include <queue>
 
 #include "combo.c"
 #include "data.h"
@@ -15,6 +16,7 @@ struct Node{
     double bins;
     vector<double> lambdas;
     vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
+    vector<bool> forbidden_lambdas;
 };
 
 struct Knapsack{
@@ -22,30 +24,47 @@ struct Knapsack{
     vector<bool> solution;
 };
 
-Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi, pair<int,int> chosen = {-1, -1}){
+Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi, vector<pair<int,int>> vec_chosen = {}){
     IloEnv sub_env;
     IloModel sub(sub_env);
 
     IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
 
-    if(chosen.first != -1){
-        //cout << "ENTREI AQUI\n";
-        x_knapsack[chosen.first].setUB(0.0);
-        x_knapsack[chosen.second].setUB(0.0);
-    }
+    // if(vec_chosen[0].first != -1){ // HARDCODE!!!!!!!!
+    //     //cout << "ENTREI AQUI\n";
+    //     x_knapsack[vec_chosen[0].first].setUB(0.0);
+    //     x_knapsack[vec_chosen[0].second].setUB(0.0);
+    // }
 
     IloExpr reduced_cost(sub_env); 
     IloExpr sub_weight(sub_env);
     IloRangeArray sub_constraint(sub_env); 
 
+    IloRangeArray branching_constraint(sub_env);
+
+    //cout << "Banindo: \n";  
+    for(int i = 0; i < vec_chosen.size(); i++){
+        IloExpr branching_sum(sub_env);
+
+        branching_sum += x_knapsack[vec_chosen[i].first] + x_knapsack[vec_chosen[i].second];
+
+        branching_constraint.add(branching_sum <= 1);
+
+        //cout << vec_chosen[i].first << " " << vec_chosen[i].second;
+    }
+    //cout << endl;
+
     for (int i = 0; i < n; i++){
-        reduced_cost -= pi[i] * x_knapsack[i]; //correção numérica
+        reduced_cost -= pi[i] * x_knapsack[i]; 
         sub_weight += weight[i] * x_knapsack[i]; 
     }
+
     //sub_sum_obj = 1 - sub_sum_obj;
     sub_constraint.add(sub_weight <= capacity);
 
     sub.add(sub_constraint);
+    sub.add(branching_constraint);
+
     IloObjective sub_objective = IloMinimize(sub_env, 1 + reduced_cost);
     sub.add(sub_objective);
 
@@ -66,7 +85,7 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     Knapsack knapsack;
 
     knapsack.obj_value = sub_cplex.getObjValue();
-    cout << "Knapsack obj: " << knapsack.obj_value << endl;
+    //cout << "Knapsack obj: " << knapsack.obj_value << endl;
     knapsack.solution = solution;
 
     sub_env.end();
@@ -74,7 +93,7 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     return knapsack;
 }
 
-Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
+Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = {{-1, -1}}, vector<bool> ban_lambdas = {}){
 
     Node node;
 
@@ -136,14 +155,22 @@ Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
 
     vector<vector<bool>> new_patterns;
 
+    queue<int> next_ban;
+
+    for(int i = n; i < ban_lambdas.size(); i++){
+        if(ban_lambdas[i]){
+            next_ban.push(i);
+        }
+    }
+
     while(true){
         IloNumArray pi(env, n);
 
         rmp.getDuals(pi, partition_constraint);
 
-        for (size_t i = 0; i < n; i++){
-		    cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
-		}
+        // for (size_t i = 0; i < n; i++){
+		//     cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
+		// }
         double z;
         item items[n];
         Knapsack cplex_knap;
@@ -160,10 +187,10 @@ Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
             z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
             z = (1 - z);
         } else{
-            if(chosen.first == -1){
+            if(vec_chosen[0].first == -1){
                 cplex_knap = SolveKnapsack(n, capacity, weight, pi);
             }else{
-                cplex_knap = SolveKnapsack(n, capacity, weight, pi, chosen);
+                cplex_knap = SolveKnapsack(n, capacity, weight, pi, vec_chosen);
             }
         }
 
@@ -204,6 +231,13 @@ Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
+            if(lambda.getSize() == next_ban.front()){
+                while(!next_ban.empty()){
+                    lambda[next_ban.front()].setUB(0.0);
+                    next_ban.pop();
+                }
+            }
+
             //rmp.exportModel("a.lp");
 
             rmp.solve(); //resolver de novo com a nova coluna
@@ -220,8 +254,6 @@ Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
     node.bins = rmp.getObjValue();
     vector<double> solution(lambda.getSize());
 
-    //cout << "Padrões dos Lambdas: \n";
-
     for(int i = 0; i < lambda.getSize(); i++){
         solution[i] = rmp.getValue(lambda[i]);
     }
@@ -232,6 +264,8 @@ Node ColumnGeneration(Data& data, bool root, pair<int,int> chosen = {-1, -1}){
         pattern.push_back(new_patterns[i]);
     }
 
+    // cout << "Padrões dos Lambdas: \n";
+    
     // for(int i = 0; i < pattern.size(); i++){
     //     cout << "Lambda " << i << ": ";
     //     for(int j = 0; j < pattern[i].size(); j++){
@@ -266,10 +300,13 @@ int main(int argc, char** argv) {
         cout << root.lambdas[i] << " ";
     } cout << endl;
 
+    //return 0;
+
     stack<Node> tree;
     tree.push(root);
 
-    double ub = 9999999;
+    //double ub = 9999999;
+    double ub = root.bins;
 
     while(!tree.empty()){
         Node node = tree.top();
@@ -294,44 +331,61 @@ int main(int argc, char** argv) {
         } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
             double frac_sum = 0;
             double most_frac = 0;
+            vector<pair<int,int>> vec_chosen;
             pair<int,int> chosen;
-            bool break_flag = false;
 
             for(int i = 0; i < node.lambdas.size(); i++){ // item 1
                 for(int j = i + 1; j < node.lambdas.size(); j++){ // item 2
                     for(int k = n; k < node.lambdas.size(); k++){ // olhar dentro do lambda e ver se tem o par
                         if(node.pattern[k][i] && node.pattern[k][j]){
-                            frac_sum =+ node.lambdas[k];
+                            frac_sum += node.lambdas[k];
                         }
                     }
-                    if(abs(frac_sum - 0.5) == 1e-6){
-                        chosen.first = i;
-                        chosen.second = j;
-                        break_flag = true;
-                        break;
-                    }
-                    if(abs(0.5 - frac_sum) < abs(0.5 - most_frac)){
+                    // if(abs(frac_sum - 0.5) == 1e-6){
+                    //     cout << "ASOFHISANFÇSAFNH\n";
+                    //     chosen.first = i;
+                    //     chosen.second = j;
+
+                    //     break;
+                    // }
+                    if(abs(frac_sum - 0.5) < abs(most_frac - 0.5)){
                         most_frac = frac_sum;
                         chosen.first = i;
                         chosen.second = j;
                     }
-                }
-                if(break_flag){
-                    break;
+                    frac_sum = 0;
                 }
             }
+
+            cout << "\nMais fracionário: " << most_frac << endl << endl;
+
+            vector<bool> ban_lambdas(node.lambdas.size(),0);
+            //vector<pair<int,int>> vec_chosen;
+            vec_chosen.push_back(chosen);
+
+            for(int k = n; k < node.lambdas.size(); k++){ // abrir o lambda e depois banir o par
+                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second] && node.lambdas[k]){ // PORQUE ISSO DA ERRADO??
+                    ban_lambdas[k] = 1;
+                }
+            }
+
+            cout << "Lambdas banidos: \n";
+
+            for(int i = 0; i < ban_lambdas.size(); i ++){
+                cout << ban_lambdas[i] << " ";
+            } cout << endl;
 
             cout << "Escolhidos: " << chosen.first << " " << chosen.second << endl;
 
-            Node n1 = ColumnGeneration(data, false, chosen);
+            Node n1 = ColumnGeneration(data, false, vec_chosen, ban_lambdas);
 
-            for(int i = 0; i < n1.pattern.size(); i++){
-                cout << "Lambda " << i << ": ";
-                for(int j = 0; j < n1.pattern[i].size(); j++){
-                    cout << n1.pattern[i][j] << " ";
-                }
-                cout << endl;
-            }
+            // for(int i = 0; i < n1.pattern.size(); i++){
+            //     cout << "Lambda " << i << ": ";
+            //     for(int j = 0; j < n1.pattern[i].size(); j++){
+            //         cout << n1.pattern[i][j] << " ";
+            //     }
+            //     cout << endl;
+            // }
 
         }
 
