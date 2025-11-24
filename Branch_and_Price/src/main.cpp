@@ -17,6 +17,7 @@ struct Node{
     vector<double> lambdas;
     vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
     vector<bool> forbidden_lambdas;
+    vector<pair<int,int>> vec_chosen;
 };
 
 struct Knapsack{
@@ -29,12 +30,6 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     IloModel sub(sub_env);
 
     IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
-
-    // if(vec_chosen[0].first != -1){ // HARDCODE!!!!!!!!
-    //     //cout << "ENTREI AQUI\n";
-    //     x_knapsack[vec_chosen[0].first].setUB(0.0);
-    //     x_knapsack[vec_chosen[0].second].setUB(0.0);
-    // }
 
     IloExpr reduced_cost(sub_env); 
     IloExpr sub_weight(sub_env);
@@ -316,7 +311,10 @@ int main(int argc, char** argv) {
     tree.push(root);
 
     //double ub = 9999999;
-    double ub = root.bins;
+    double ub = root.bins + 1;
+
+    vector<double> solution;
+    double bins;
 
     while(!tree.empty()){
         Node node = tree.top();
@@ -345,10 +343,14 @@ int main(int argc, char** argv) {
             for(auto a : node.lambdas){
                 cout << a << " ";
             }cout << endl;
+
+            solution = node.lambdas;
+            bins = node.bins;
+
         } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
             double frac_sum = 0;
             double most_frac = 0;
-            vector<pair<int,int>> vec_chosen;
+            vector<pair<int,int>> vec_chosen = node.vec_chosen;
             pair<int,int> chosen;
 
             //O LIMITE DO FOR É ATÉ N?
@@ -380,6 +382,8 @@ int main(int argc, char** argv) {
                 }
             }
 
+            // cout << "Tamanho do chosen: " << vec_chosen.size() << endl;
+
             // cout << "Lambdas banidos: \n";
 
             // for(int i = 0; i < ban_lambdas.size(); i ++){
@@ -400,6 +404,7 @@ int main(int argc, char** argv) {
 
             Node n1 = ColumnGeneration(data, false, vec_chosen, new_ban);
             n1.forbidden_lambdas = new_ban;
+            n1.vec_chosen = vec_chosen;
 
             tree.push(n1);
 
@@ -419,6 +424,12 @@ int main(int argc, char** argv) {
 
         //break;
     }
+
+    for(auto a : solution){
+        cout << a << " ";
+    } cout << endl;
+
+    cout << "BINS: " << bins << endl;
 
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
