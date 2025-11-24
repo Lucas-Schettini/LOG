@@ -147,11 +147,11 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
 
     cout << "Initial lower bound: " << rmp.getObjValue() << endl;
 
-	cout << "Initial solution: ";
-	for (size_t j = 0; j < lambda.getSize(); j++){
-		cout << rmp.getValue(lambda[j]) << " ";
-	}
-	cout << endl;
+	// cout << "Initial solution: ";
+	// for (size_t j = 0; j < lambda.getSize(); j++){
+	// 	cout << rmp.getValue(lambda[j]) << " ";
+	// }
+	// cout << endl;
 
     vector<vector<bool>> new_patterns;
 
@@ -231,8 +231,12 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
-            if(lambda.getSize() == next_ban.front()){
-                while(!next_ban.empty()){
+            if (ban_lambdas.size() > lambda.getSize()-1 && ban_lambdas[lambda.getSize()-1]) {
+                lambda[lambda.getSize()-1].setUB(0.0);
+            }
+
+            if(!next_ban.empty() && next_ban.front() == lambda.getSize() - 1){
+                while(!next_ban.empty() && next_ban.front() < lambda.getSize()){
                     lambda[next_ban.front()].setUB(0.0);
                     next_ban.pop();
                 }
@@ -273,6 +277,12 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
     //     }
     //     cout << endl;
     // }
+
+    if (ban_lambdas.size() < lambda.getSize()){
+        ban_lambdas.resize(lambda.getSize(), false);
+    }
+
+    node.forbidden_lambdas = ban_lambdas;
     
     node.lambdas = solution;
     node.pattern = pattern;
@@ -312,7 +322,8 @@ int main(int argc, char** argv) {
         Node node = tree.top();
         tree.pop();
 
-        if(node.bins > ub){
+        if(node.bins > ub + 1e-6){
+            cout << "\nPulei\n\n";
             continue;
         }
 
@@ -321,33 +332,33 @@ int main(int argc, char** argv) {
         for(int i = 0; i < node.lambdas.size(); i++){
             if((node.lambdas[i] < 1 - 1e-6) && (node.lambdas[i] > 0 + 1e-6)){ 
                 feasible = false;
+                //cout << "\n" << node.lambdas[i] << endl;
+                break;
             } 
         }
 
         if(feasible){
-            if(node.bins < ub){
+            cout << "Viável\n";
+            if(node.bins < ub - 1e-6){
                 ub = node.bins;
             }
+            for(auto a : node.lambdas){
+                cout << a << " ";
+            }cout << endl;
         } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
             double frac_sum = 0;
             double most_frac = 0;
             vector<pair<int,int>> vec_chosen;
             pair<int,int> chosen;
 
-            for(int i = 0; i < node.lambdas.size(); i++){ // item 1
-                for(int j = i + 1; j < node.lambdas.size(); j++){ // item 2
+            //O LIMITE DO FOR É ATÉ N?
+            for(int i = 0; i < n; i++){ // item 1
+                for(int j = i + 1; j < n; j++){ // item 2
                     for(int k = n; k < node.lambdas.size(); k++){ // olhar dentro do lambda e ver se tem o par
                         if(node.pattern[k][i] && node.pattern[k][j]){
                             frac_sum += node.lambdas[k];
                         }
                     }
-                    // if(abs(frac_sum - 0.5) == 1e-6){
-                    //     cout << "ASOFHISANFÇSAFNH\n";
-                    //     chosen.first = i;
-                    //     chosen.second = j;
-
-                    //     break;
-                    // }
                     if(abs(frac_sum - 0.5) < abs(most_frac - 0.5)){
                         most_frac = frac_sum;
                         chosen.first = i;
@@ -357,27 +368,44 @@ int main(int argc, char** argv) {
                 }
             }
 
-            cout << "\nMais fracionário: " << most_frac << endl << endl;
+            // cout << "\nMais fracionário: " << most_frac << endl << endl;
 
             vector<bool> ban_lambdas(node.lambdas.size(),0);
             //vector<pair<int,int>> vec_chosen;
             vec_chosen.push_back(chosen);
 
             for(int k = n; k < node.lambdas.size(); k++){ // abrir o lambda e depois banir o par
-                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second] && node.lambdas[k]){ // PORQUE ISSO DA ERRADO??
+                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second] && node.lambdas[k]){ 
                     ban_lambdas[k] = 1;
                 }
             }
 
-            cout << "Lambdas banidos: \n";
+            // cout << "Lambdas banidos: \n";
 
-            for(int i = 0; i < ban_lambdas.size(); i ++){
-                cout << ban_lambdas[i] << " ";
-            } cout << endl;
+            // for(int i = 0; i < ban_lambdas.size(); i ++){
+            //     cout << ban_lambdas[i] << " ";
+            // } cout << endl;
 
-            cout << "Escolhidos: " << chosen.first << " " << chosen.second << endl;
+            cout << "\nEscolhidos: " << chosen.first << " " << chosen.second << endl;
 
-            Node n1 = ColumnGeneration(data, false, vec_chosen, ban_lambdas);
+            vector<bool> new_ban = node.forbidden_lambdas;
+
+            if (new_ban.size() < ban_lambdas.size()){
+                new_ban.resize(ban_lambdas.size(), false);
+            }
+
+            for (int i = 0; i < ban_lambdas.size(); i++) {
+                new_ban[i] = new_ban[i] || ban_lambdas[i];
+            }
+
+            Node n1 = ColumnGeneration(data, false, vec_chosen, new_ban);
+            n1.forbidden_lambdas = new_ban;
+
+            tree.push(n1);
+
+            // for(auto a : n1.lambdas){
+            //     cout << a << " ";
+            // }cout << endl;
 
             // for(int i = 0; i < n1.pattern.size(); i++){
             //     cout << "Lambda " << i << ": ";
@@ -389,7 +417,7 @@ int main(int argc, char** argv) {
 
         }
 
-        break;
+        //break;
     }
 
     auto end = chrono::high_resolution_clock::now();
