@@ -12,12 +12,18 @@
 
 using namespace std;
 
+struct BranchingDecision{
+    int a,b;
+    bool together;
+};
+
 struct Node{
     double bins;
     vector<double> lambdas;
     vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
     vector<bool> forbidden_lambdas;
     vector<pair<int,int>> vec_chosen;
+    vector<BranchingDecision> decisions;
 };
 
 struct Knapsack{
@@ -41,9 +47,17 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     for(int i = 0; i < vec_chosen.size(); i++){
         IloExpr branching_sum(sub_env);
 
-        branching_sum += x_knapsack[vec_chosen[i].first] + x_knapsack[vec_chosen[i].second];
+        if(false){ //JUNTOS
+            // branching_sum += x_knapsack[vec_chosen[i].first] - x_knapsack[vec_chosen[i].second];
+            // branching_constraint.add(branching_sum == 0);
 
-        branching_constraint.add(branching_sum <= 1);
+            branching_constraint.add(x_knapsack[vec_chosen[i].first] == 1);
+            branching_constraint.add(x_knapsack[vec_chosen[i].second] == 1);
+
+        } else{ //SEPARADOS
+            branching_sum += x_knapsack[vec_chosen[i].first] + x_knapsack[vec_chosen[i].second];
+            branching_constraint.add(branching_sum <= 1);  
+        }
 
         //cout << vec_chosen[i].first << " " << vec_chosen[i].second;
     }
@@ -80,7 +94,7 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     Knapsack knapsack;
 
     knapsack.obj_value = sub_cplex.getObjValue();
-    //cout << "Knapsack obj: " << knapsack.obj_value << endl;
+    // cout << "Knapsack obj: " << knapsack.obj_value << endl;
     knapsack.solution = solution;
 
     sub_env.end();
@@ -350,7 +364,7 @@ int main(int argc, char** argv) {
         } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
             double frac_sum = 0;
             double most_frac = 0;
-            vector<pair<int,int>> vec_chosen = node.vec_chosen;
+            vector<BranchingDecision> vec_chosen = node.decisions;
             pair<int,int> chosen;
 
             //O LIMITE DO FOR É ATÉ N?
@@ -372,13 +386,25 @@ int main(int argc, char** argv) {
 
             // cout << "\nMais fracionário: " << most_frac << endl << endl;
 
-            vector<bool> ban_lambdas(node.lambdas.size(),0);
+            // vector<bool> ban_lambdas(node.lambdas.size(),0);
+            vector<pair<int,int>> banned_pairs;
+            vector<pair<int,int>> joined_pairs;
             //vector<pair<int,int>> vec_chosen;
-            vec_chosen.push_back(chosen);
+
+            vec_chosen.push_back({chosen.first, chosen.second, false});
+            vec_chosen.push_back({chosen.first, chosen.second, true});
 
             for(int k = n; k < node.lambdas.size(); k++){ // abrir o lambda e depois banir o par
-                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second] && node.lambdas[k]){ 
-                    ban_lambdas[k] = 1;
+                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second]
+                    && node.lambdas[k] && !node.decisions[k].together){ 
+
+                    // ban_lambdas[k] = 1;
+                    banned_pairs.push_back(chosen);
+                }
+                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second]
+                    && node.lambdas[k] && node.decisions[k].together){
+
+                    joined_pairs.push_back(chosen);
                 }
             }
 
@@ -402,15 +428,16 @@ int main(int argc, char** argv) {
                 new_ban[i] = new_ban[i] || ban_lambdas[i];
             }
 
-            Node n1 = ColumnGeneration(data, false, vec_chosen, new_ban);
-            n1.forbidden_lambdas = new_ban;
-            n1.vec_chosen = vec_chosen;
+            Node nS = ColumnGeneration(data, false, vec_chosen, new_ban);
+            nS.vec_chosen = vec_chosen;
 
-            tree.push(n1);
+            Node nT = ColumnGeneration(data, false, vec_chosen, new_ban);
 
-            // for(auto a : n1.lambdas){
-            //     cout << a << " ";
-            // }cout << endl;
+            tree.push(nS);
+
+            for(auto a : nS.lambdas){
+                cout << a << " ";
+            }cout << endl;
 
             // for(int i = 0; i < n1.pattern.size(); i++){
             //     cout << "Lambda " << i << ": ";
