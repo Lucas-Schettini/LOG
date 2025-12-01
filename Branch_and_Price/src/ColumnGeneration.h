@@ -10,7 +10,7 @@
 #include <chrono>
 #include <queue>
 
-#include "combo.c"
+// #include "combo.c"
 #include "data.h"
 
 using namespace std;
@@ -40,11 +40,15 @@ public:
     int capacity;
     vector<int> weight;
 
-    IloNumArray pi;
+    IloEnv env;
+    IloNumVarArray lambda;
+    IloModel master;
+    IloRangeArray partition_constraint;
+    IloObjective master_objective;
 
     ColumnGeneration(Data& data);
 
-    Knapsack SolveKnapsack(vector<BranchingDecision> decisions);
+    Knapsack SolveKnapsack(IloNumArray pi, vector<BranchingDecision> decisions);
 
     Node solve(bool root, vector<BranchingDecision> decisions);
 
