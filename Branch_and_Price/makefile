@@ -4,12 +4,12 @@ BITS_OPTION = -m64
 ####diretorios com as libs do cplex
 
 #usar isso só no notebook
-CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2212/cplex
-CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2212/concert
+# CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2212/cplex
+# CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2212/concert
 
 #usar isso só no pc
-# CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2211/cplex
-# CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2211/concert
+CPLEXDIR  = /opt/ibm/ILOG/CPLEX_Studio2211/cplex
+CONCERTDIR = /opt/ibm/ILOG/CPLEX_Studio2211/concert
 
 CPLEXLIBDIR   = $(CPLEXDIR)/lib/x86-64_linux/static_pic
 CONCERTLIBDIR = $(CONCERTDIR)/lib/x86-64_linux/static_pic
@@ -19,8 +19,8 @@ CPPC = g++
 #############################
 
 #### opcoes de compilacao e includes
-# CCOPT = $(BITS_OPTION) -O3 -fPIC -fexceptions -DNDEBUG -DIL_STD -std=c++0x
-CCOPT = $(BITS_OPTION) -g -O0 -fPIC -fexceptions -DNDEBUG -DIL_STD -std=c++0x #(usar para gdb)
+CCOPT = $(BITS_OPTION) -O3 -fPIC -fexceptions -DNDEBUG -DIL_STD -std=c++0x
+# CCOPT = $(BITS_OPTION) -g -O0 -fPIC -fexceptions -DNDEBUG -DIL_STD -std=c++0x #(usar para gdb)
 CONCERTINCDIR = $(CONCERTDIR)/include
 CPLEXINCDIR   = $(CPLEXDIR)/include
 CCFLAGS = $(CCOPT) -I$(CPLEXINCDIR) -I$(CONCERTINCDIR) -I./include

@@ -1,2 +1,1 @@
--MM
-src/data.cpp
+obj/data.o: src/data.cpp src/data.h
