@@ -21,8 +21,8 @@ struct Node{
     double bins;
     vector<double> lambdas;
     vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
-    vector<bool> forbidden_lambdas;
-    vector<pair<int,int>> vec_chosen;
+    // vector<bool> forbidden_lambdas;
+    // vector<pair<int,int>> vec_chosen;
     vector<BranchingDecision> decisions;
 };
 
@@ -31,9 +31,10 @@ struct Knapsack{
     vector<bool> solution;
 };
 
-Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi, vector<pair<int,int>> vec_chosen = {}){
-    IloEnv sub_env;
-    IloModel sub(sub_env);
+Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi, IloEnv& sub_env, IloModel& sub, 
+                       IloCplex& sub_cplex, vector<BranchingDecision> decisions = {}){
+    // IloEnv sub_env;
+    // IloModel sub(sub_env);
 
     IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
 
@@ -44,18 +45,18 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     IloRangeArray branching_constraint(sub_env);
 
     //cout << "Banindo: \n";  
-    for(int i = 0; i < vec_chosen.size(); i++){
+    for(int i = 0; i < decisions.size(); i++){
         IloExpr branching_sum(sub_env);
 
-        if(false){ //JUNTOS
-            // branching_sum += x_knapsack[vec_chosen[i].first] - x_knapsack[vec_chosen[i].second];
-            // branching_constraint.add(branching_sum == 0);
+        if(decisions[i].together){ //JUNTOS
+            branching_sum += x_knapsack[decisions[i].a] - x_knapsack[decisions[i].b];
+            branching_constraint.add(branching_sum == 0);
 
-            branching_constraint.add(x_knapsack[vec_chosen[i].first] == 1);
-            branching_constraint.add(x_knapsack[vec_chosen[i].second] == 1);
+            // branching_constraint.add(x_knapsack[decisions[i].a] == 1);
+            // branching_constraint.add(x_knapsack[decisions[i].b] == 1);
 
         } else{ //SEPARADOS
-            branching_sum += x_knapsack[vec_chosen[i].first] + x_knapsack[vec_chosen[i].second];
+            branching_sum += x_knapsack[decisions[i].a] + x_knapsack[decisions[i].b];
             branching_constraint.add(branching_sum <= 1);  
         }
 
@@ -77,7 +78,7 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     IloObjective sub_objective = IloMinimize(sub_env, 1 + reduced_cost);
     sub.add(sub_objective);
 
-    IloCplex sub_cplex(sub);
+    // IloCplex sub_cplex(sub);
     sub_cplex.setOut(sub_env.getNullStream());
     sub_cplex.solve();
 
@@ -97,12 +98,18 @@ Knapsack SolveKnapsack(int n, int capacity, vector<int>& weight, IloNumArray& pi
     // cout << "Knapsack obj: " << knapsack.obj_value << endl;
     knapsack.solution = solution;
 
-    sub_env.end();
+    x_knapsack.end();
+    sub_constraint.end();
+    branching_constraint.end();
+    reduced_cost.end();
+    sub_weight.end();
+    sub_objective.end();
 
     return knapsack;
 }
 
-Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = {{-1, -1}}, vector<bool> ban_lambdas = {}){
+Node ColumnGeneration(Data& data, bool root, IloEnv& env, IloModel& master, IloEnv& sub_env, IloModel& sub,
+    IloCplex& rmp, IloCplex& sub_cplex, vector<BranchingDecision> decisions = {}){
 
     Node node;
 
@@ -125,8 +132,8 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
         }
     }
 
-    IloEnv env;
-    IloModel master(env);
+    // IloEnv env;
+    // IloModel master(env);
 
     IloNumVarArray lambda(env, n, 0, IloInfinity);
 
@@ -148,7 +155,7 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
     IloObjective master_objective = IloMinimize(env, sum_obj);
     master.add(master_objective);
 
-    IloCplex rmp(master);
+    // IloCplex rmp(master);
     //rmp.exportModel("init.lp");
 
     rmp.setOut(env.getNullStream()); // disables CPLEX log
@@ -166,8 +173,8 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
 
     queue<int> next_ban;
 
-    for(int i = n; i < ban_lambdas.size(); i++){
-        if(ban_lambdas[i]){
+    for(int i = 0; i < decisions.size(); i++){
+        if(!decisions[i].together){
             next_ban.push(i);
         }
     }
@@ -196,10 +203,10 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
             z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
             z = (1 - z);
         } else{
-            if(vec_chosen[0].first == -1){
-                cplex_knap = SolveKnapsack(n, capacity, weight, pi);
+            if(decisions.empty()){
+                cplex_knap = SolveKnapsack(n, capacity, weight, pi, sub_env, sub, sub_cplex);
             }else{
-                cplex_knap = SolveKnapsack(n, capacity, weight, pi, vec_chosen);
+                cplex_knap = SolveKnapsack(n, capacity, weight, pi, sub_env, sub, sub_cplex, decisions);
             }
         }
 
@@ -240,9 +247,16 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
-            if (ban_lambdas.size() > lambda.getSize()-1 && ban_lambdas[lambda.getSize()-1]) {
-                lambda[lambda.getSize()-1].setUB(0.0);
-            }
+            // if (ban_lambdas.size() > lambda.getSize()-1 && ban_lambdas[lambda.getSize()-1]) {
+            //     lambda[lambda.getSize()-1].setUB(0.0);
+            // }
+
+            // if(!next_ban.empty() && next_ban.front() == lambda.getSize() - 1){
+            //     while(!next_ban.empty() && next_ban.front() < lambda.getSize()){
+            //         lambda[next_ban.front()].setUB(0.0);
+            //         next_ban.pop();
+            //     }
+            // }
 
             if(!next_ban.empty() && next_ban.front() == lambda.getSize() - 1){
                 while(!next_ban.empty() && next_ban.front() < lambda.getSize()){
@@ -250,6 +264,7 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
                     next_ban.pop();
                 }
             }
+
 
             //rmp.exportModel("a.lp");
 
@@ -287,16 +302,20 @@ Node ColumnGeneration(Data& data, bool root, vector<pair<int,int>> vec_chosen = 
     //     cout << endl;
     // }
 
-    if (ban_lambdas.size() < lambda.getSize()){
-        ban_lambdas.resize(lambda.getSize(), false);
-    }
+    // if (ban_lambdas.size() < lambda.getSize()){
+    //     ban_lambdas.resize(lambda.getSize(), false);
+    // }
 
-    node.forbidden_lambdas = ban_lambdas;
+    // node.forbidden_lambdas = ban_lambdas;
     
     node.lambdas = solution;
     node.pattern = pattern;
+    node.decisions = decisions;
 
-    env.end();
+    sum_obj.end();
+    lambda.end();
+    partition_constraint.end();
+    master_objective.end();
 
     return node;
 }
@@ -312,7 +331,15 @@ int main(int argc, char** argv) {
     int capacity = data.capacity/*10*/;
     int n = data.n/*weight.size()*/;
 
-    Node root = ColumnGeneration(data, true); //COLOCAR O TRUE DEPOIS!!!!!!!!!!
+    IloEnv env;
+    IloModel master(env);
+    IloCplex rmp(master);
+
+    IloEnv sub_env;
+    IloModel sub(sub_env);
+    IloCplex sub_cplex(sub);
+
+    Node root = ColumnGeneration(data, true, env, master, sub_env, sub, rmp, sub_cplex); //COLOCAR O TRUE DEPOIS!!!!!!!!!!
 
     cout << "Solução: ";
     for(int i = 0; i < root.lambdas.size(); i++){
@@ -322,6 +349,7 @@ int main(int argc, char** argv) {
     //return 0;
 
     stack<Node> tree;
+    // queue<Node> tree;
     tree.push(root);
 
     //double ub = 9999999;
@@ -332,6 +360,7 @@ int main(int argc, char** argv) {
 
     while(!tree.empty()){
         Node node = tree.top();
+        // Node node = tree.front();
         tree.pop();
 
         if(node.bins > ub + 1e-6){
@@ -364,7 +393,6 @@ int main(int argc, char** argv) {
         } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
             double frac_sum = 0;
             double most_frac = 0;
-            vector<BranchingDecision> vec_chosen = node.decisions;
             pair<int,int> chosen;
 
             //O LIMITE DO FOR É ATÉ N?
@@ -387,57 +415,28 @@ int main(int argc, char** argv) {
             // cout << "\nMais fracionário: " << most_frac << endl << endl;
 
             // vector<bool> ban_lambdas(node.lambdas.size(),0);
-            vector<pair<int,int>> banned_pairs;
-            vector<pair<int,int>> joined_pairs;
             //vector<pair<int,int>> vec_chosen;
-
-            vec_chosen.push_back({chosen.first, chosen.second, false});
-            vec_chosen.push_back({chosen.first, chosen.second, true});
-
-            for(int k = n; k < node.lambdas.size(); k++){ // abrir o lambda e depois banir o par
-                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second]
-                    && node.lambdas[k] && !node.decisions[k].together){ 
-
-                    // ban_lambdas[k] = 1;
-                    banned_pairs.push_back(chosen);
-                }
-                if(node.pattern[k][chosen.first] && node.pattern[k][chosen.second]
-                    && node.lambdas[k] && node.decisions[k].together){
-
-                    joined_pairs.push_back(chosen);
-                }
-            }
-
-            // cout << "Tamanho do chosen: " << vec_chosen.size() << endl;
-
-            // cout << "Lambdas banidos: \n";
-
-            // for(int i = 0; i < ban_lambdas.size(); i ++){
-            //     cout << ban_lambdas[i] << " ";
-            // } cout << endl;
 
             cout << "\nEscolhidos: " << chosen.first << " " << chosen.second << endl;
 
-            vector<bool> new_ban = node.forbidden_lambdas;
+            BranchingDecision dS = {chosen.first, chosen.second, false}; // separados
+            BranchingDecision dT = {chosen.first, chosen.second, true};  // juntos
 
-            if (new_ban.size() < ban_lambdas.size()){
-                new_ban.resize(ban_lambdas.size(), false);
-            }
+            vector<BranchingDecision> decS = node.decisions;
+            vector<BranchingDecision> decT = node.decisions;
 
-            for (int i = 0; i < ban_lambdas.size(); i++) {
-                new_ban[i] = new_ban[i] || ban_lambdas[i];
-            }
+            decS.push_back(dS);
+            decT.push_back(dT);
 
-            Node nS = ColumnGeneration(data, false, vec_chosen, new_ban);
-            nS.vec_chosen = vec_chosen;
-
-            Node nT = ColumnGeneration(data, false, vec_chosen, new_ban);
+            Node nS = ColumnGeneration(data, false, env, master, sub_env, sub, rmp, sub_cplex, decS);
+            Node nT = ColumnGeneration(data, false, env, master, sub_env, sub, rmp, sub_cplex, decT);
 
             tree.push(nS);
+            tree.push(nT);
 
-            for(auto a : nS.lambdas){
-                cout << a << " ";
-            }cout << endl;
+            // for(auto a : nT.lambdas){
+            //     cout << a << " ";
+            // }cout << endl;
 
             // for(int i = 0; i < n1.pattern.size(); i++){
             //     cout << "Lambda " << i << ": ";
