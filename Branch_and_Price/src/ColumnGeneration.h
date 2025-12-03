@@ -46,6 +46,13 @@ public:
     IloRangeArray partition_constraint;
     IloObjective master_objective;
 
+    IloEnv sub_env;
+    IloModel sub;
+    IloRangeArray sub_constraint;
+    IloRangeArray branching_constraint;
+    IloNumVarArray x_knapsack;
+    IloObjective sub_objective;    
+
     ColumnGeneration(Data& data);
 
     Knapsack SolveKnapsack(IloNumArray pi, vector<BranchingDecision> decisions);

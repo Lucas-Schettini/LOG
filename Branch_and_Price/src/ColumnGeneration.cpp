@@ -30,19 +30,30 @@ ColumnGeneration :: ColumnGeneration(Data& data){
     master.add(partition_constraint);
     master_objective = IloMinimize(env, sum_obj);
     master.add(master_objective);
+
+    sub_env = IloEnv();
+    sub = IloModel(sub_env);
+    sub_constraint = IloRangeArray(sub_env);
+    branching_constraint = IloRangeArray(sub_env);
+    x_knapsack = IloNumVarArray(sub_env, n, 0, 1, ILOINT);
+    //sub_objective = IloMinimize(sub_env);
+
 }
 
 Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray pi, vector<BranchingDecision> decisions){
-    IloEnv sub_env;
-    IloModel sub(sub_env);
+    if (sub_objective.getImpl() != 0) {
+        sub.remove(sub_objective);
+    }
+    // IloEnv sub_env;
+    // IloModel sub(sub_env);
 
-    IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
+    // IloNumVarArray x_knapsack(sub_env, n, 0, 1, ILOINT);
 
     IloExpr reduced_cost(sub_env); 
     IloExpr sub_weight(sub_env);
-    IloRangeArray sub_constraint(sub_env); 
+    //IloRangeArray sub_constraint(sub_env); 
 
-    IloRangeArray branching_constraint(sub_env);
+    //branching_constraint(sub_env);
 
     //cout << "Banindo: \n";  
     for(int i = 0; i < decisions.size(); i++){
@@ -72,7 +83,8 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray pi, vector<BranchingDecis
     sub.add(sub_constraint);
     sub.add(branching_constraint);
 
-    IloObjective sub_objective = IloMinimize(sub_env, 1 + reduced_cost);
+    //IloObjective sub_objective = IloMinimize(sub_env, 1 + reduced_cost);
+    sub_objective = IloMinimize(sub_env, 1 + reduced_cost);
     sub.add(sub_objective);
 
     IloCplex sub_cplex(sub);
@@ -95,16 +107,8 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray pi, vector<BranchingDecis
     // cout << "Knapsack obj: " << knapsack.obj_value << endl;
     knapsack.solution = solution;
 
-    x_knapsack.clear();
-    x_knapsack.end();
-    // sub_constraint.end();
-    // branching_constraint.end();
-    // reduced_cost.end();
-    // sub_weight.end();
-    // sub_objective.end();
-
-    sub_cplex.clear();
-    sub_cplex.end();
+    sub_constraint.clear();
+    branching_constraint.clear();
 
     return knapsack;
 }
@@ -291,8 +295,8 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision> decisions){
     // partition_constraint.end();
     // master_objective.end();
 
-    rmp.clear();
-    rmp.end();
+    // rmp.clear();
+    // rmp.end();
 
     return node;
 }
