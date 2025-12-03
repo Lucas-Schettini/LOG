@@ -13,6 +13,8 @@
 // #include "combo.c"
 #include "data.h"
 
+#define M 1000000
+
 using namespace std;
 
 struct BranchingDecision{
@@ -51,13 +53,15 @@ public:
     IloRangeArray sub_constraint;
     IloRangeArray branching_constraint;
     IloNumVarArray x_knapsack;
-    IloObjective sub_objective;    
+    IloObjective sub_objective;   
 
     ColumnGeneration(Data& data);
 
-    Knapsack SolveKnapsack(IloNumArray pi, vector<BranchingDecision> decisions);
+    void resetMaster();
 
-    Node solve(bool root, vector<BranchingDecision> decisions);
+    Knapsack SolveKnapsack(IloNumArray& pi, vector<BranchingDecision>& decisions);
+
+    Node solve(bool root, vector<BranchingDecision>& decisions, vector<vector<bool>>& or_pattern);
 
 };
 

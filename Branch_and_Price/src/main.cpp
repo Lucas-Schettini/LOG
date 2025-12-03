@@ -25,7 +25,8 @@ int main(int argc, char** argv) {
     ColumnGeneration solver(data);
 
     vector<BranchingDecision> vec;
-    Node root = solver.solve(false, vec);
+    vector<vector<bool>> null_pattern;
+    Node root = solver.solve(false, vec, null_pattern);
 
     cout << "Solução: ";
     for(int i = 0; i < root.lambdas.size(); i++){
@@ -81,10 +82,10 @@ int main(int argc, char** argv) {
             double most_frac = 0;
             pair<int,int> chosen;
 
-            for(auto a : node.pattern){
-                for(int i = 0; i < a.size(); i++)
-                    cout << a[i] << " ";
-            }
+            // for(auto a : node.pattern){
+            //     for(int i = 0; i < a.size(); i++)
+            //         cout << a[i] << " ";
+            // }
 
             //O LIMITE DO FOR É ATÉ N?
             for(int i = 0; i < n; i++){ // item 1
@@ -111,22 +112,19 @@ int main(int argc, char** argv) {
             cout << "\nEscolhidos: " << chosen.first << " " << chosen.second << endl;
 
             BranchingDecision dS = {chosen.first, chosen.second, false}; // separados
-            //BranchingDecision dT = {chosen.first, chosen.second, true};  // juntos
+            BranchingDecision dT = {chosen.first, chosen.second, true};  // juntos
 
             vector<BranchingDecision> decS = node.decisions;
-            //vector<BranchingDecision> decT = node.decisions;
+            vector<BranchingDecision> decT = node.decisions;
 
             decS.push_back(dS);
-            //decT.push_back(dT);
+            decT.push_back(dT);
 
-            // Node nS = ColumnGeneration(data, false, env, master, sub_env, sub, rmp, sub_cplex, decS);
-            // Node nT = ColumnGeneration(data, false, env, master, sub_env, sub, rmp, sub_cplex, decT);
-
-            Node nS = solver.solve(false, decS);
-            //Node nT = solver.solve(false, decT);
+            Node nS = solver.solve(false, decS, node.pattern);
+            Node nT = solver.solve(false, decT, node.pattern);
 
             tree.push(nS);
-            //tree.push(nT);
+            tree.push(nT);
 
             // for(auto a : nT.lambdas){
             //     cout << a << " ";
