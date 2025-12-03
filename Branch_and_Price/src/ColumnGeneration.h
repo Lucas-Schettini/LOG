@@ -25,7 +25,7 @@ struct BranchingDecision{
 struct Node{
     double bins;
     vector<double> lambdas;
-    vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
+    // vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
     // vector<bool> forbidden_lambdas;
     // vector<pair<int,int>> vec_chosen;
     vector<BranchingDecision> decisions;
@@ -53,7 +53,9 @@ public:
     IloRangeArray sub_constraint;
     IloRangeArray branching_constraint;
     IloNumVarArray x_knapsack;
-    IloObjective sub_objective;   
+    IloObjective sub_objective; 
+    
+    vector<vector<bool>> pattern //PADRÂO TEM QUE SER ATRIBUTO E NÂO DO NÒ
 
     ColumnGeneration(Data& data);
 

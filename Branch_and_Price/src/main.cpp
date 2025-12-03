@@ -87,6 +87,9 @@ int main(int argc, char** argv) {
             //         cout << a[i] << " ";
             // }
 
+            cout << node.pattern.size() << endl;
+            cout << node.lambdas.size() << endl;
+
             //O LIMITE DO FOR É ATÉ N?
             for(int i = 0; i < n; i++){ // item 1
                 for(int j = i + 1; j < n; j++){ // item 2
@@ -115,16 +118,16 @@ int main(int argc, char** argv) {
             BranchingDecision dT = {chosen.first, chosen.second, true};  // juntos
 
             vector<BranchingDecision> decS = node.decisions;
-            vector<BranchingDecision> decT = node.decisions;
+            //vector<BranchingDecision> decT = node.decisions;
 
             decS.push_back(dS);
-            decT.push_back(dT);
+            //decT.push_back(dT);
 
             Node nS = solver.solve(false, decS, node.pattern);
-            Node nT = solver.solve(false, decT, node.pattern);
+            //Node nT = solver.solve(false, decT, node.pattern);
 
             tree.push(nS);
-            tree.push(nT);
+            //tree.push(nT);
 
             // for(auto a : nT.lambdas){
             //     cout << a << " ";

@@ -89,7 +89,7 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray& pi, vector<BranchingDeci
 
     //branching_constraint(sub_env);
 
-    //cout << "Banindo: \n";  
+    // cout << "Banindo: \n";  
     for(int i = 0; i < decisions.size(); i++){
         IloExpr branching_sum(sub_env);
 
@@ -102,7 +102,6 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray& pi, vector<BranchingDeci
             branching_constraint.add(branching_sum <= 1);  
         }
 
-        //cout << vec_chosen[i].first << " " << vec_chosen[i].second;
     }
     //cout << endl;
 
@@ -123,9 +122,10 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray& pi, vector<BranchingDeci
 
     IloCplex sub_cplex(sub);
     sub_cplex.setOut(sub_env.getNullStream());
-    // if(decisions.size() > 0 && !decisions[0].together){
-    //     sub_cplex.exportModel("knapsack.lp");
-    // }
+    if(decisions.size() > 0 && !decisions[0].together){
+
+        sub_cplex.exportModel("knapsack.lp");
+    }
     sub_cplex.solve();
 
     vector<bool> solution;
@@ -134,9 +134,9 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray& pi, vector<BranchingDeci
         solution.push_back(sub_cplex.getValue(x_knapsack[j]));
     }
 
-    // for(int i = 0; i < solution.size(); i++){
-    //     cout << solution[i] << " ";
-    // } cout << endl;
+    for(int i = 0; i < solution.size(); i++){
+        cout << solution[i] << " ";
+    } cout << endl;
 
     Knapsack knapsack;
 
@@ -162,10 +162,11 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray& pi, vector<BranchingDeci
 }
 
 Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions, vector<vector<bool>>& or_pattern){
+    cout << "PASOJDapsoDJAŜDLAS:D" << endl;
     Node node;
     // double M = 1e6;
 
-    resetMaster();
+    //resetMaster();
 
     vector<vector<bool>> pattern(n, vector<bool> (n , 0));
 
@@ -206,7 +207,6 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions, 
 
     while(true){
         IloNumArray pi(env, n);
-
         rmp.getDuals(pi, partition_constraint);
 
         // for (size_t i = 0; i < n; i++){
@@ -248,13 +248,10 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions, 
             // }
             // new_patterns.push_back(knapsack_sol); //inserir o padrão do lambda[i]    
         }else{
-            if(root){
-                
-            }
             new_patterns.push_back(cplex_knap.solution);
-            if(!root){
-                or_pattern.push_back(cplex_knap.solution);
-            }
+            // if(!root){
+            //     or_pattern.push_back(cplex_knap.solution);
+            // }
         }
 
         // for(auto newp : new_patterns){
@@ -290,25 +287,6 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions, 
             IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
             lambda.add(new_lambda);
 
-            // if (ban_lambdas.size() > lambda.getSize()-1 && ban_lambdas[lambda.getSize()-1]) {
-            //     lambda[lambda.getSize()-1].setUB(0.0);
-            // }
-
-            // if(!next_ban.empty() && next_ban.front() == lambda.getSize() - 1){
-            //     while(!next_ban.empty() && next_ban.front() < lambda.getSize()){
-            //         lambda[next_ban.front()].setUB(0.0);
-            //         next_ban.pop();
-            //     }
-            // }
-
-
-            //MATAR O NEXT_BAN E FAZER O BANIMENTO DO CASO JUNTO
-            // if(!next_ban.empty() && next_ban.front() == lambda.getSize() - 1){
-            //     while(!next_ban.empty() && next_ban.front() < lambda.getSize()){
-            //         lambda[next_ban.front()].setUB(0.0);
-            //         next_ban.pop();
-            //     }
-            // }
             if(!root){
                 // cout << "Original pattern: " << or_pattern.size() << endl;
                 // cout << "Decisões a serem tomadas: " << decisions.size() << endl;
@@ -318,21 +296,21 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions, 
                         if(decisions[i].together){
                             if(or_pattern[j][decisions[i].a] && !or_pattern[j][decisions[i].b] ||
                             !or_pattern[j][decisions[i].a] && or_pattern[j][decisions[i].b]){
-                                //cout << "Junto a: " << decisions[i].a << " b: " << decisions[i].b << endl;
-                                lambda[j].setUB(0.0);
+                                cout << "Junto a: " << decisions[i].a << " b: " << decisions[i].b << endl;
+                                lambda[j].setUB(0.0); //SE EU NÃO ACHAR O LAMBDA EU PRECISO OBRIGATORIAMENTE LIBERAR ELE
                             }
                         } else{
                             if(or_pattern[j][decisions[i].a] && or_pattern[j][decisions[i].b]){
                                 lambda[j].setUB(0.0);
                                 //cout << "Padrão morto: " << j << endl;
-                                //cout << "Separado a: " << decisions[i].a << " b: " << decisions[i].b << endl;
+                                cout << "Separado a: " << decisions[i].a << " b: " << decisions[i].b << endl;
                             }
                         }
                     }
                 }
             }
 
-            //rmp.exportModel("a.lp");
+            rmp.exportModel("a.lp");
 
             rmp.solve(); //resolver de novo com a nova coluna
 
