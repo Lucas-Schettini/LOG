@@ -1,5 +1,4 @@
 #include "ColumnGeneration.h"
-#include "combo.c"
 
 int main(int argc, char** argv) {
 
@@ -8,37 +7,14 @@ int main(int argc, char** argv) {
 
     auto start = chrono::high_resolution_clock::now();
 
-    vector<int> weight = data.weights/*{3, 4, 5, 8, 9}*/; //ta repetido isso lá na função, dps resolve
-    int capacity = data.capacity/*10*/;
-    int n = data.n/*weight.size()*/;
-
-    // IloEnv env;
-    // IloModel master(env);
-    // IloCplex rmp(master);
-
-    // IloEnv sub_env;
-    // IloModel sub(sub_env);
-    // IloCplex sub_cplex(sub);
-
-    // Node root = ColumnGeneration(data, false, env, master, sub_env, sub, rmp, sub_cplex); //COLOCAR O TRUE DEPOIS!!!!!!!!!!
-
     ColumnGeneration solver(data);
 
     vector<BranchingDecision> vec;
     Node root = solver.solve(false, vec);
 
-    cout << "Solução: ";
-    for(int i = 0; i < root.lambdas.size(); i++){
-        cout << root.lambdas[i] << " ";
-    } cout << endl;
-
-    // return 0;
-
     stack<Node> tree;
-    // queue<Node> tree;
     tree.push(root);
 
-    //double ub = 9999999;
     double ub = root.bins + 1;
 
     vector<double> solution;
@@ -46,10 +22,9 @@ int main(int argc, char** argv) {
 
     while(!tree.empty()){
         Node node = tree.top();
-        // Node node = tree.front();
         tree.pop();
 
-        if(node.bins > ub + 1e-6){
+        if(node.bins >= ub + 1e-6){
             cout << "\nPulei\n\n";
             continue;
         }
@@ -59,7 +34,6 @@ int main(int argc, char** argv) {
         for(int i = 0; i < node.lambdas.size(); i++){
             if((node.lambdas[i] < 1 - 1e-6) && (node.lambdas[i] > 0 + 1e-6)){ 
                 feasible = false;
-                //cout << "\n" << node.lambdas[i] << endl;
                 break;
             } 
         }
@@ -69,28 +43,11 @@ int main(int argc, char** argv) {
             if(node.bins < ub - 1e-6){
                 ub = node.bins;
             }
-            for(auto a : node.lambdas){
-                cout << a << " ";
-            }cout << endl;
 
             solution = node.lambdas;
             bins = node.bins;
 
         } else{ //olhar o mais fracionário (ex: procurar 2 nós, e olhar todos os padrões (lambdas) em que eles existem e procurar o mais fracionário)
-
-            // for(auto a : node.pattern){
-            //     for(int i = 0; i < a.size(); i++)
-            //         cout << a[i] << " ";
-            // }
-
-            // cout << node.lambdas.size() << endl;
-
-            // cout << "\nMais fracionário: " << most_frac << endl << endl;
-
-            // vector<bool> ban_lambdas(node.lambdas.size(),0);
-            //vector<pair<int,int>> vec_chosen;
-
-            cout << "\nEscolhidos: " << node.chosen.first << " " << node.chosen.second << endl;
 
             BranchingDecision dS = {node.chosen.first, node.chosen.second, false}; // separados
             BranchingDecision dT = {node.chosen.first, node.chosen.second, true};  // juntos
@@ -104,24 +61,17 @@ int main(int argc, char** argv) {
             Node nS = solver.solve(false, decS);
             Node nT = solver.solve(false, decT);
 
-            tree.push(nS);
-            tree.push(nT);
-
-            // for(auto a : nT.lambdas){
-            //     cout << a << " ";
-            // }cout << endl;
-
-            // for(int i = 0; i < n1.pattern.size(); i++){
-            //     cout << "Lambda " << i << ": ";
-            //     for(int j = 0; j < n1.pattern[i].size(); j++){
-            //         cout << n1.pattern[i][j] << " ";
-            //     }
-            //     cout << endl;
-            // }
+            // cout << "UB: " << ub << endl;
+            // cout << "Bins Separado: " << ceil(nS.bins) << " || Bins Juntos: " << ceil(nT.bins) << endl;
+            
+            if(ceil(nS.bins) <= ub - 1e-6){
+                tree.push(nS);
+            }            
+            if(ceil(nT.bins) <= ub - 1e-6){
+                tree.push(nT);
+            }
 
         }
-
-        //break;
     }
 
     for(auto a : solution){

@@ -10,7 +10,7 @@
 #include <chrono>
 #include <queue>
 
-// #include "combo.c"
+// #include "combo.cpp"
 #include "data.h"
 
 #define M 1000000
@@ -25,9 +25,6 @@ struct BranchingDecision{
 struct Node{
     double bins;
     vector<double> lambdas;
-    // vector<vector<bool>> pattern; //pattern[i] indica o padrão que está no lambda[i], ou seja, os itens que estão nele
-    // vector<bool> forbidden_lambdas;
-    // vector<pair<int,int>> vec_chosen;
     vector<BranchingDecision> decisions;
     pair<int,int> chosen;
 };
@@ -47,14 +44,7 @@ public:
     IloNumVarArray lambda;
     IloModel master;
     IloRangeArray partition_constraint;
-    IloObjective master_objective;
-
-    // IloEnv sub_env;
-    // IloModel sub;
-    // IloRangeArray sub_constraint;
-    // IloRangeArray branching_constraint;
-    // IloNumVarArray x_knapsack;
-    // IloObjective sub_objective; 
+    IloObjective master_objective; 
     
     vector<vector<bool>> global_pattern; //PADRÂO TEM QUE SER ATRIBUTO E NÂO DO NÒ
 
