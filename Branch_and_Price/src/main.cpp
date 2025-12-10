@@ -10,7 +10,11 @@ int main(int argc, char** argv) {
     ColumnGeneration solver(data);
 
     vector<BranchingDecision> vec;
-    Node root = solver.solve(false, vec);
+    Node root = solver.solve(true, vec);
+
+    // for(auto a : root.lambdas){
+    //     cout << a << " ";
+    // } cout << endl;
 
     stack<Node> tree;
     tree.push(root);

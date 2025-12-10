@@ -1,2 +1,2 @@
 obj/ColumnGeneration.o: src/ColumnGeneration.cpp src/ColumnGeneration.h \
- src/data.h
+ src/combo.cpp src/data.h

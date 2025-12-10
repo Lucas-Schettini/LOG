@@ -50,15 +50,15 @@ Knapsack ColumnGeneration :: SolveKnapsack(IloNumArray& pi, vector<BranchingDeci
     IloRangeArray branching_constraint(sub_env);
 
     for(int i = 0; i < decisions.size(); i++){
-        IloExpr branching_sum(sub_env);
+        // IloExpr branching_sum(sub_env);
 
         if(decisions[i].together){
-            branching_sum += x_knapsack[decisions[i].a] - x_knapsack[decisions[i].b];
-            branching_constraint.add(branching_sum == 0);
+            // branching_sum += x_knapsack[decisions[i].a] - x_knapsack[decisions[i].b];
+            branching_constraint.add(x_knapsack[decisions[i].a] - x_knapsack[decisions[i].b] == 0);
 
         } else{ 
-            branching_sum += x_knapsack[decisions[i].a] + x_knapsack[decisions[i].b];
-            branching_constraint.add(branching_sum <= 1);  
+            // branching_sum += x_knapsack[decisions[i].a] + x_knapsack[decisions[i].b];
+            branching_constraint.add(x_knapsack[decisions[i].a] + x_knapsack[decisions[i].b] <= 1);  
         }
 
     }
@@ -147,24 +147,20 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
         IloNumArray pi(env, n);
         rmp.getDuals(pi, partition_constraint);
 
-        // for (size_t i = 0; i < n; i++){
-        //     cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
-        // }
         double z;
-        // item items[n];
+        item items[n];
         Knapsack cplex_knap;
 
         if(root){
+            for(int i = 0; i < n; i++){
+                items[i].p = (itype)(pi[i] * M); //coeficiente do x (multiplicar por M para tirar a imprecisão)
+                items[i].w = (itype)(weight[i]); //peso
+                items[i].x = 0; //solução inicial
+                items[i].index = i; //posição
+            }
 
-            // for(int i = 0; i < n; i++){
-            //     items[i].p = (itype)(pi[i] * M); //coeficiente do x (multiplicar por M para tirar a imprecisão)
-            //     items[i].w = (itype)(weight[i]); //peso
-            //     items[i].x = 0; //solução inicial
-            //     items[i].index = i; //posição
-            // }
-
-            // z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
-            // z = (1 - z);
+            z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
+            z = (1 - z);
         } else{
             cplex_knap = SolveKnapsack(pi, decisions);
         }
@@ -172,11 +168,11 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
         pi.end();
 
         if(root){
-            // vector<bool> knapsack_sol(n, 0);
-            // for(int i = 0; i < n; i++){
-            //     knapsack_sol[items[i].index] = items[i].x;
-            // }
-            // global_pattern.push_back(cplex_knap.solution);
+            vector<bool> knapsack_sol(n, 0);
+            for(int i = 0; i < n; i++){
+                knapsack_sol[items[i].index] = items[i].x;
+            }
+            global_pattern.push_back(knapsack_sol);
         }else{
             global_pattern.push_back(cplex_knap.solution);
         }
@@ -188,10 +184,12 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
             IloNumArray entering_col(env, n);
 
             if(root){
-                // for (size_t i = 0; i < n; i++){
-                //     entering_col[items[i].index] = items[i].x;
-                //     //cout << (entering_col[i]) << " ";
-                // }
+                for (size_t i = 0; i < n; i++){
+                    entering_col[items[i].index] = items[i].x;
+                    if(entering_col[i] > 1 - 1e-6){
+                        entering_col[i] = 1;
+                    }
+                }
             } else{
                 for (size_t i = 0; i < n; i++){
                     entering_col[i] = cplex_knap.solution[i];
@@ -227,7 +225,9 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
             rmp.solve(); //resolver de novo com a nova coluna
 
         } else{
-            global_pattern.pop_back();
+            //if(!root){
+                global_pattern.pop_back();
+            //}
             break;
         }
     }
@@ -257,26 +257,57 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
         }
     }
 
-    double frac_sum = 0;
-    double most_frac = 1;
+    // double frac_sum = 0;
+    // double most_frac = 1;
     pair<int,int> chosen = {-1,-1};
+    double deltaFrac = std::numeric_limits<double>::infinity();
+    double tempDeltaFrac;
     
-    if(!root){
-        for(int i = 0; i < n; i++){ // item 1
-            for(int j = i + 1; j < n; j++){ // item 2
-                for(int k = n; k < node.lambdas.size(); k++){ // olhar dentro do lambda e ver se tem o par
-                    if(global_pattern[k][i] && global_pattern[k][j]){
-                        frac_sum += node.lambdas[k];
-                    }
+    z = vector<vector<double>>(n,vector<double>(n,0));
+
+    for (int i = 0; i < n; i++){
+        for (int j = i + 1; j < n; j++){
+            for (int k = n; k < global_pattern.size(); k++){
+                if (global_pattern[k][i] == true && global_pattern[k][j] == true){
+                    z[i][j] += node.lambdas[k];
+                    z[j][i] += node.lambdas[k];
                 }
-                if(abs(frac_sum - 0.5) < abs(most_frac - 0.5)){
-                    most_frac = frac_sum;
-                    chosen.first = i;
-                    chosen.second = j;
-                }
-                frac_sum = 0;
+            }
+
+            tempDeltaFrac = abs(0.5 - z[i][j]);
+            if (tempDeltaFrac < deltaFrac){
+                chosen = {i, j};
+                deltaFrac = tempDeltaFrac;
             }
         }
+    }
+
+    // for(int i = 0; i < n; i++){ // item 1
+    //     for(int j = i + 1; j < n; j++){ // item 2
+    //         for(int k = n; k < node.lambdas.size(); k++){ // olhar dentro do lambda e ver se tem o par
+    //             if(global_pattern[k][i] && global_pattern[k][j]){
+    //                 frac_sum += node.lambdas[k];
+    //             }
+    //         }
+    //         if(abs(frac_sum - 0.5) < abs(most_frac - 0.5)){
+    //             most_frac = frac_sum;
+    //             chosen.first = i;
+    //             chosen.second = j;
+    //         }
+    //         frac_sum = 0;
+    //     }
+    // }
+
+
+
+    if(chosen.first == -1){
+        cout << "QUEBROU\n";
+        // cout << "Padrões: \n";
+        // for(auto a : global_pattern){
+        //     for(int j = 0; j < a.size(); j++){
+        //         cout << a[j] << " ";
+        //     }cout << endl;
+        // }cout << endl;
     }
 
     node.chosen = chosen;
@@ -284,6 +315,8 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
     for (int i = 0; i < lambda.getSize(); i++){
         lambda[i].setUB(IloInfinity);
     }
+
+    cout << node.bins << endl;
 
     rmp.end();
 

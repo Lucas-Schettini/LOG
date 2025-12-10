@@ -10,7 +10,7 @@
 #include <chrono>
 #include <queue>
 
-// #include "combo.cpp"
+#include "combo.cpp"
 #include "data.h"
 
 #define M 1000000
@@ -46,7 +46,8 @@ public:
     IloRangeArray partition_constraint;
     IloObjective master_objective; 
     
-    vector<vector<bool>> global_pattern; //PADRÂO TEM QUE SER ATRIBUTO E NÂO DO NÒ
+    vector<vector<bool>> global_pattern;
+    vector<vector<double>> z;
 
     ColumnGeneration(Data& data);
 
