@@ -29,6 +29,7 @@ struct Node{
     // vector<bool> forbidden_lambdas;
     // vector<pair<int,int>> vec_chosen;
     vector<BranchingDecision> decisions;
+    pair<int,int> chosen;
 };
 
 struct Knapsack{
@@ -48,14 +49,14 @@ public:
     IloRangeArray partition_constraint;
     IloObjective master_objective;
 
-    IloEnv sub_env;
-    IloModel sub;
-    IloRangeArray sub_constraint;
-    IloRangeArray branching_constraint;
-    IloNumVarArray x_knapsack;
-    IloObjective sub_objective; 
+    // IloEnv sub_env;
+    // IloModel sub;
+    // IloRangeArray sub_constraint;
+    // IloRangeArray branching_constraint;
+    // IloNumVarArray x_knapsack;
+    // IloObjective sub_objective; 
     
-    vector<vector<bool>> pattern //PADRÂO TEM QUE SER ATRIBUTO E NÂO DO NÒ
+    vector<vector<bool>> global_pattern; //PADRÂO TEM QUE SER ATRIBUTO E NÂO DO NÒ
 
     ColumnGeneration(Data& data);
 
@@ -63,7 +64,7 @@ public:
 
     Knapsack SolveKnapsack(IloNumArray& pi, vector<BranchingDecision>& decisions);
 
-    Node solve(bool root, vector<BranchingDecision>& decisions, vector<vector<bool>>& or_pattern);
+    Node solve(bool root, vector<BranchingDecision>& decisions);
 
 };
 
