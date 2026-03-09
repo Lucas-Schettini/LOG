@@ -1,4 +1,5 @@
 #include "mpsReader.h"
+#include <suitesparse/umfpack.h>
 
 using Eigen::RowVectorXd;
 
@@ -16,6 +17,13 @@ int main(int argc, char** argv){
 
     VectorXd x_est = b;
 
+    vector<int> base_val(A.cols(), -1);
+
+    for(int i = 0; i < A.rows(); i++){
+        base_val[i] = A.cols() - A.rows() + i;
+    //    cout << base_val[i] << " ";
+    }//cout << endl;
+
     //tem que se ligar que nem sempre é um bloco tlgd, pode ser tipo x7,x9,x11
     MatrixXd B = A.block(0, 4, A.rows(), 3); // (linha inicial, coluna inicial, quantidade de linhas, quantidade de colunas)
 
@@ -24,7 +32,7 @@ int main(int argc, char** argv){
     // cout << c << endl;
     // cout << B << endl;
 
-    RowVectorXd cB = c.segment(4,3);
+    RowVectorXd cB = c.segment(4,3); //segmento que começa no indice 4 e tem tamanho 3
 
     RowVectorXd y = (B.transpose().colPivHouseholderQr().solve(cB.transpose())).transpose();
 
@@ -50,18 +58,39 @@ int main(int argc, char** argv){
 
     double t = 99999999;
     double temp = 0;
-    int base_exiter;
+    int base_exiter, idx_exiter;
 
     for(int i = 0; i < 3;i++){
         temp = b(i)/d(i);
         //cout << temp << " ";
         if(temp < t){
             t = temp;
-            base_exiter = i;
+            base_exiter = base_val[i];
+            idx_exiter = i;
         }
     } //cout << endl;
 
     cout << "t: " << t << endl;
+    cout << "Quem sai: " << base_exiter << endl;
+
+    cout << "Novo x*: ";
+    for(int i = 0; i < x_est.size(); i++){
+        if(i == idx_exiter){
+            x_est(i) = d(i)*t;
+        }else{
+            x_est(i) = x_est(i) - d(i)*t;
+        }
+
+        cout << x_est(i) << " ";
+    } cout << endl;
+
+    base_val[idx_exiter] = base_enter;
+
+    cout << "Novas variaveis na base: ";
+
+    for(int i = 0; i < A.rows(); i++){
+        cout << base_val[i] << " ";
+    }cout << endl;
 
     return 0;
 }
