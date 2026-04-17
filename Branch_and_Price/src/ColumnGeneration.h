@@ -13,7 +13,7 @@
 #include "combo.cpp"
 #include "data.h"
 
-#define M 1000000
+#define M 10000000
 
 using namespace std;
 

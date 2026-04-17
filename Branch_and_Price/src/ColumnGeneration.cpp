@@ -148,6 +148,7 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
         rmp.getDuals(pi, partition_constraint);
 
         double z;
+        double z_int;
         item items[n];
         Knapsack cplex_knap;
 
@@ -159,8 +160,8 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
                 items[i].index = i; //posição
             }
 
-            z = combo(items, items + n - 1, capacity, 0, 9999999, true, true)/M;
-            z = (1 - z);
+            z_int = combo(items, items + n - 1, capacity, 0, 9999999, true, true);
+            z = 1.0 - (z_int/(double)M);
         } else{
             cplex_knap = SolveKnapsack(pi, decisions);
         }
@@ -170,14 +171,14 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
         if(root){
             vector<bool> knapsack_sol(n, 0);
             for(int i = 0; i < n; i++){
-                knapsack_sol[items[i].index] = items[i].x;
+                knapsack_sol[items[i].index] = (items[i].x > 0.5) ? 1 : 0;
             }
             global_pattern.push_back(knapsack_sol);
         }else{
             global_pattern.push_back(cplex_knap.solution);
         }
 
-        bool improvment = (root && z < -1e-6) || (!root && cplex_knap.obj_value < -1e-6);
+        bool improvment = (root && z < -1e-8) || (!root && cplex_knap.obj_value < -1e-6);
 
         if(improvment){
 
@@ -240,22 +241,12 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
     }
     
     node.lambdas = solution;
-    node.decisions = decisions;
 
-    if(!root){
-        for(int i = 0; i < n; i++){
-            if(solution[i] > 1e-6){
-                cout << "Variável artificial na solução - podar\n";
-                
-                for (int k = 0; k < lambda.getSize(); k++){
-                    lambda[k].setUB(IloInfinity);
-                }
-                
-                rmp.end();
-                return node;
-            }
-        }
-    }
+    // for(auto a : solution){
+    //     cout << a << " ";
+    // }
+
+    node.decisions = decisions;
 
     // double frac_sum = 0;
     // double most_frac = 1;
@@ -316,7 +307,7 @@ Node ColumnGeneration :: solve(bool root, vector<BranchingDecision>& decisions){
         lambda[i].setUB(IloInfinity);
     }
 
-    cout << node.bins << endl;
+    // cout << node.bins << endl;
 
     rmp.end();
 
