@@ -2,9 +2,12 @@ CXX = g++
 
 CXXFLAGS = -std=c++17 -O2 -Wall
 
+CXXFLAGS += -MMD -MP
+-include $(OBJ:.o=.d)
+
 INCLUDES = -I/usr/include/eigen3 -Isrc
 
-LIBS = -lumfpack -lamd -lcholmod -lcolamd -lsuitesparseconfig
+LIBS = -lumfpack -lamd -lsuitesparseconfig
 
 SRC_DIR = src
 OBJ_DIR = obj

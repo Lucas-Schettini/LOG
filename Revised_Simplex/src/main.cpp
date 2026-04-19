@@ -19,7 +19,9 @@ int main(int argc, char** argv){
 
     VectorXd xB = b;
 
-    vector<int> base_val(A.cols(), -1);
+    cout << "Primeiro xB: \n" << b << endl;
+
+    vector<int> base_val(A.rows(), -1);
 
     for(int i = 0; i < A.rows(); i++){
         base_val[i] = A.cols() - A.rows() + i;
@@ -35,29 +37,47 @@ int main(int argc, char** argv){
 
     RowVectorXd cB = c.tail(3); //segmento que começa no indice 4 e tem tamanho 3
 
-    while(true){
+    int counter = 0;
 
+    while(true){
+        counter++;
         // RowVectorXd y = (B.transpose().colPivHouseholderQr().solve(cB.transpose())).transpose();
         RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
         cout << "y: " << y << endl;
 
         double cost = 0;
-        double min_cost = 9999999999;
+        double max_cost = EPSILON;
         int base_enter = -1;
 
-        for(int j = 0; j < A.rows(); j++){ //custos fora da base
+        for(int j = 0; j < A.cols(); j++){ //custos fora da base
+
+            bool basic = false;
+            for(int k = 0; k < A.rows(); k++){
+                if(base_val[k] == j){
+                    basic = true;
+                    break;
+                }
+            }
+            if(basic) continue;
+
             cost = c(j) - y*A.col(j);
             cout << "Custo: " << cost << endl; 
-            if(cost < min_cost){
-                min_cost = cost;
+            // if(cost > max_cost){
+            //     max_cost = cost;
+            //     base_enter = j;
+            // }
+            if(cost > EPSILON){ // QUAL O MELHOR CRITÉRIO?
                 base_enter = j;
+                break;
             }
         }
-        cout << "Min cost: " << min_cost << " Quem entra na base é x" << base_enter << endl; //codado baseado em iniciar no 0
+        cout << "Max cost: " << max_cost << " Quem entra na base é x" << base_enter << endl; //codado baseado em iniciar no 0
 
         if(base_enter == -1){
-            cout << "ÓTIMO\n";
+            cout << "ÓTIMO\nSolução: \n";
+            cout << xB << endl;
+            cout << "Custo: " << cB*xB << endl;
             break;
         }
 
@@ -67,30 +87,10 @@ int main(int argc, char** argv){
         cout << "d: \n" << d << endl;
 
         double t = 99999999;
-        double temp = 0;
-        int base_exiter;
+        //int base_exiter;
         int idx_exiter = -1;
 
-        for(int i = 0; i < 3;i++){
-            temp = b(i)/d(i);
-            //cout << temp << " ";
-            if(temp < t){
-                t = temp;
-                base_exiter = base_val[i];
-                idx_exiter = i;
-            }
-        } //cout << endl;
-
-        if(idx_exiter == -1){
-            cout << "ILIMITADO\n";
-            break;
-        }
-
-        cout << "t: " << t << endl;
-        cout << "Quem sai: " << base_exiter << endl;
-
-        cout << "Novo x*: ";
-        for(int i = 0; i < xB.size(); i++){
+        for(int i = 0; i < A.rows();i++){
             if(d(i) > EPSILON){
                 double ratio = xB(i) / d(i);
                 if(ratio < t){ 
@@ -98,14 +98,23 @@ int main(int argc, char** argv){
                     idx_exiter = i; 
                 }
             }
+        } 
 
-            cout << xB(i) << " ";
-        } cout << endl;
+        if(idx_exiter == -1){
+            cout << "ILIMITADO\n";
+            break;
+        }
+
+        cout << "t: " << t << endl;
+        //cout << "Quem sai: " << base_exiter << endl;
 
         base_val[idx_exiter] = base_enter;
 
         xB = xB - t * d;
         xB(idx_exiter) = t;
+        // xB(idx_exiter) = 0.0;
+
+        cout << "Novo xB: \n" << xB << endl;
 
         cout << "Novas variaveis na base: ";
 
@@ -113,10 +122,12 @@ int main(int argc, char** argv){
             cout << base_val[i] << " ";
         }cout << endl;
 
-        for(int i = 0; i < (int)base_val.size(); i++){
+        for(int i = 0; i < A.rows(); i++){
             B.col(i) = A.col(base_val[i]);
         }
         cB(idx_exiter) = c(base_enter);
+        cout << B << endl;
+        //if(counter == 2) break;
     }
 
     return 0;
