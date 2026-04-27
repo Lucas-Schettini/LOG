@@ -5,6 +5,11 @@
 
 using Eigen::RowVectorXd;
 
+struct EtaFactor{
+    int col; //numero da coluna substituida
+    VectorXd vec; // qual é a coluna de fato
+};
+
 int main(int argc, char** argv){
 
     //mpsReader data = mpsReader(argv[1]);
@@ -39,10 +44,28 @@ int main(int argc, char** argv){
 
     int counter = 0;
 
+    vector<EtaFactor> eta_list;
+
     while(true){
         counter++;
         // RowVectorXd y = (B.transpose().colPivHouseholderQr().solve(cB.transpose())).transpose();
         RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
+
+        // RowVectorXd y = cB;
+        
+        // for(int k = eta_list.size() - 1; k >= 0; k--){
+        //     int p = eta_list[k].col; //nova coluna na identidade
+        //     VectorXd eta = eta_list[k].vec; // coluna de fato
+
+        //     double yp = y(p) / eta(p);
+
+        //     for(size_t i = 0; i < eta_list.size() - 1; i++){
+        //         if(i == (size_t) p) continue;
+        //         y(i) = y(i) - eta(i) * yp;
+        //     }
+
+        //     y(p) = yp;
+        // }
 
         cout << "y: " << y << endl;
 
@@ -63,16 +86,16 @@ int main(int argc, char** argv){
 
             cost = c(j) - y*A.col(j);
             cout << "Custo: " << cost << endl; 
-            // if(cost > max_cost){
-            //     max_cost = cost;
-            //     base_enter = j;
-            // }
-            if(cost > EPSILON){ // QUAL O MELHOR CRITÉRIO?
+            if(cost > max_cost){
+                max_cost = cost;
                 base_enter = j;
-                break;
             }
+            // if(cost > EPSILON){ // QUAL O MELHOR CRITÉRIO?
+            //     base_enter = j;
+            //     break;
+            // }
         }
-        cout << "Max cost: " << max_cost << " Quem entra na base é x" << base_enter << endl; //codado baseado em iniciar no 0
+        // cout << "Max cost: " << max_cost << " Quem entra na base é x" << base_enter << endl; //codado baseado em iniciar no 0
 
         if(base_enter == -1){
             cout << "ÓTIMO\nSolução: \n";
@@ -84,7 +107,10 @@ int main(int argc, char** argv){
         //VectorXd d = B.colPivHouseholderQr().solve(A.col(base_enter));
         VectorXd d = B.partialPivLu().solve(A.col(base_enter));
 
-        cout << "d: \n" << d << endl;
+        // VectorXd d = A.col(base_enter); // d = a
+        
+
+        // cout << "d: \n" << d << endl;
 
         double t = 99999999;
         //int base_exiter;
@@ -105,7 +131,7 @@ int main(int argc, char** argv){
             break;
         }
 
-        cout << "t: " << t << endl;
+        // cout << "t: " << t << endl;
         //cout << "Quem sai: " << base_exiter << endl;
 
         base_val[idx_exiter] = base_enter;
@@ -114,19 +140,21 @@ int main(int argc, char** argv){
         xB(idx_exiter) = t;
         // xB(idx_exiter) = 0.0;
 
-        cout << "Novo xB: \n" << xB << endl;
+        // cout << "Novo xB: \n" << xB << endl;
 
-        cout << "Novas variaveis na base: ";
+        // cout << "Novas variaveis na base: ";
 
-        for(int i = 0; i < A.rows(); i++){
-            cout << base_val[i] << " ";
-        }cout << endl;
+        // for(int i = 0; i < A.rows(); i++){
+        //     cout << base_val[i] << " ";
+        // }cout << endl;
+
+        eta_list.push_back({idx_exiter, d});
 
         for(int i = 0; i < A.rows(); i++){
             B.col(i) = A.col(base_val[i]);
         }
         cB(idx_exiter) = c(base_enter);
-        cout << B << endl;
+        // cout << B << endl;
         //if(counter == 2) break;
     }
 
