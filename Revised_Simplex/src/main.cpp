@@ -1,7 +1,4 @@
-#include "mpsReader.h"
-#include <suitesparse/umfpack.h>
-
-#define EPSILON 1e-9
+#include "fact.h"
 
 using Eigen::RowVectorXd;
 
@@ -49,9 +46,9 @@ int main(int argc, char** argv){
     while(true){
         counter++;
         // RowVectorXd y = (B.transpose().colPivHouseholderQr().solve(cB.transpose())).transpose();
-        RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
+        // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
-        // RowVectorXd y = cB;
+        RowVectorXd y = cB;
         
         // for(int k = eta_list.size() - 1; k >= 0; k--){
         //     int p = eta_list[k].col; //nova coluna na identidade
@@ -59,7 +56,7 @@ int main(int argc, char** argv){
 
         //     double yp = y(p) / eta(p);
 
-        //     for(size_t i = 0; i < eta_list.size() - 1; i++){
+        //     for(size_t i = 0; i < A.rows(); i++){
         //         if(i == (size_t) p) continue;
         //         y(i) = y(i) - eta(i) * yp;
         //     }
