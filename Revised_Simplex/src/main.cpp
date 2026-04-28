@@ -30,25 +30,28 @@ int main(int argc, char** argv){
     //    cout << base_val[i] << " ";
     }//cout << endl;
 
-    MatrixXd B = A.rightCols(3); 
+    MatrixXd B = A.rightCols(b.size()); 
 
     // cout << A << endl;
     // cout << b << endl;
     // cout << c << endl;
     // cout << B << endl;
 
-    RowVectorXd cB = c.tail(3); //segmento que começa no indice 4 e tem tamanho 3
+    RowVectorXd cB = c.tail(b.size());
 
     int counter = 0;
+
+    FactControl fact;
+    fact.initial_factorization(B); //fatorização inicial de B
 
     vector<EtaFactor> eta_list;
 
     while(true){
         counter++;
-        // RowVectorXd y = (B.transpose().colPivHouseholderQr().solve(cB.transpose())).transpose();
-        // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
+        // if(counter == 2) break;
+        RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
-        RowVectorXd y = cB;
+        // RowVectorXd y = cB;
         
         // for(int k = eta_list.size() - 1; k >= 0; k--){
         //     int p = eta_list[k].col; //nova coluna na identidade
@@ -64,10 +67,15 @@ int main(int argc, char** argv){
         //     y(p) = yp;
         // }
 
+        // VectorXd result(y.size());
+        // VectorXd yt = y.transpose();
+        // fact.solveT(result, yt);
+        // y = result.transpose();
+
         cout << "y: " << y << endl;
 
         double cost = 0;
-        double max_cost = EPSILON;
+        // double max_cost = EPSILON;
         int base_enter = -1;
 
         for(int j = 0; j < A.cols(); j++){ //custos fora da base
@@ -83,14 +91,14 @@ int main(int argc, char** argv){
 
             cost = c(j) - y*A.col(j);
             cout << "Custo: " << cost << endl; 
-            if(cost > max_cost){
-                max_cost = cost;
-                base_enter = j;
-            }
-            // if(cost > EPSILON){ // QUAL O MELHOR CRITÉRIO?
+            // if(cost > max_cost){
+            //     max_cost = cost;
             //     base_enter = j;
-            //     break;
             // }
+            if(cost > EPSILON){ // QUAL O MELHOR CRITÉRIO?
+                base_enter = j;
+                break;
+            }
         }
         // cout << "Max cost: " << max_cost << " Quem entra na base é x" << base_enter << endl; //codado baseado em iniciar no 0
 
@@ -101,7 +109,6 @@ int main(int argc, char** argv){
             break;
         }
 
-        //VectorXd d = B.colPivHouseholderQr().solve(A.col(base_enter));
         VectorXd d = B.partialPivLu().solve(A.col(base_enter));
 
         // VectorXd d = A.col(base_enter); // d = a
@@ -152,7 +159,6 @@ int main(int argc, char** argv){
         }
         cB(idx_exiter) = c(base_enter);
         // cout << B << endl;
-        //if(counter == 2) break;
     }
 
     return 0;
