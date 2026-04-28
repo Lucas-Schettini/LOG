@@ -11,12 +11,25 @@ int main(int argc, char** argv){
 
     //mpsReader data = mpsReader(argv[1]);
 
-    MatrixXd A(3, 7);
-    VectorXd b(3);
-    RowVectorXd c(7);
+    // MatrixXd A = data.A;
+    // VectorXd b = data.b;
+    // VectorXd c = data.c;
 
-    A << 3,2,1,2,1,0,0 , 1,1,1,1,0,1,0 , 4,3,3,4,0,0,1;
-    b << 225,117,420;
+    // VectorXd lb = data.lb;
+    // VectorXd ub = data.ub;
+
+    // MatrixXd A(3, 7);
+    // VectorXd b(3);
+    // RowVectorXd c(7);
+    // A << 3,2,1,2,1,0,0 , 1,1,1,1,0,1,0 , 4,3,3,4,0,0,1;
+    // b << 225,117,420;
+    // c << 19,13,12,17,0,0,0;
+
+    MatrixXd A(2, 12);
+    VectorXd b(2);
+    RowVectorXd c(12);
+    A << 3,1,5,6,9,4,3,4,7,6,4,5 , 1,0,9,5,8,1,2,7,8,7,9,1;
+    b << 72,62;
     c << 19,13,12,17,0,0,0;
 
     VectorXd xB = b;
@@ -48,29 +61,30 @@ int main(int argc, char** argv){
 
     while(true){
         counter++;
-        // if(counter == 2) break;
-        RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
+        // if(counter == 4) break;
+        // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
-        // RowVectorXd y = cB;
+        RowVectorXd y = cB;
         
-        // for(int k = eta_list.size() - 1; k >= 0; k--){
-        //     int p = eta_list[k].col; //nova coluna na identidade
-        //     VectorXd eta = eta_list[k].vec; // coluna de fato
+        for(int k = eta_list.size() - 1; k >= 0; k--){
+            int p = eta_list[k].col; //nova coluna na identidade
+            VectorXd eta = eta_list[k].vec; // coluna de fato
 
-        //     double yp = y(p) / eta(p);
+            // double yp = y(p) / eta(p);
+            double soma = 0.0;
 
-        //     for(size_t i = 0; i < A.rows(); i++){
-        //         if(i == (size_t) p) continue;
-        //         y(i) = y(i) - eta(i) * yp;
-        //     }
+            for(int i = 0; i < A.rows(); i++){
+                if(i == p) continue;
+                soma += y(i)*eta(i);
+            }
 
-        //     y(p) = yp;
-        // }
+            y(p) = (y(p) - soma) / eta(p);
+        }
 
-        // VectorXd result(y.size());
-        // VectorXd yt = y.transpose();
-        // fact.solveT(result, yt);
-        // y = result.transpose();
+        VectorXd result(y.size());
+        VectorXd yt = y.transpose();
+        fact.solveT(result, yt);
+        y = result.transpose();
 
         cout << "y: " << y << endl;
 
@@ -109,10 +123,25 @@ int main(int argc, char** argv){
             break;
         }
 
-        VectorXd d = B.partialPivLu().solve(A.col(base_enter));
+        // VectorXd d = B.partialPivLu().solve(A.col(base_enter));
 
-        // VectorXd d = A.col(base_enter); // d = a
-        
+        VectorXd d(A.rows()); // d = a
+        VectorXd a = A.col(base_enter);
+        fact.solve(d, a);
+
+        for(auto ef : eta_list){
+            int p = ef.col;
+            VectorXd eta = ef.vec;
+
+            double dp = d(p) / eta(p);
+
+            for(int i = 0; i < A.rows(); i++){
+                if(i == p) continue;
+                d(i) = d(i) - eta(i) * dp;
+            }
+            d(p) = dp;
+        }
+
 
         // cout << "d: \n" << d << endl;
 
@@ -157,6 +186,7 @@ int main(int argc, char** argv){
         for(int i = 0; i < A.rows(); i++){
             B.col(i) = A.col(base_val[i]);
         }
+
         cB(idx_exiter) = c(base_enter);
         // cout << B << endl;
     }
