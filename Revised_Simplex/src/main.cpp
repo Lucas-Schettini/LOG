@@ -2,6 +2,9 @@
 
 using Eigen::RowVectorXd;
 
+#define PINF 99999999999
+#define NINF -99999999999
+
 struct EtaFactor{
     int col; //numero da coluna substituida
     VectorXd vec; // qual é a coluna de fato
@@ -30,7 +33,12 @@ int main(int argc, char** argv){
     RowVectorXd c(12);
     A << 3,1,5,6,9,4,3,4,7,6,4,5 , 1,0,9,5,8,1,2,7,8,7,9,1;
     b << 72,62;
-    c << 19,13,12,17,0,0,0;
+    c << 2,1,-2,-2,3,2,3,-4,0,-2,-3,3;
+
+    VectorXd lb(12), ub(12);
+
+    lb << -5, NINF, -4, -2, 2, 0, 0, 3, NINF, NINF, NINF, NINF;
+    ub << PINF, 3, -2 ,3, 5, 1, PINF, PINF, 0, 5, PINF, PINF;
 
     VectorXd xB = b;
 
@@ -64,6 +72,9 @@ int main(int argc, char** argv){
         // if(counter == 4) break;
         // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
+        bool lb_satisfied = false;
+        bool ub_satisfied = false;
+
         RowVectorXd y = cB;
         
         for(int k = eta_list.size() - 1; k >= 0; k--){
@@ -89,7 +100,6 @@ int main(int argc, char** argv){
         cout << "y: " << y << endl;
 
         double cost = 0;
-        // double max_cost = EPSILON;
         int base_enter = -1;
 
         for(int j = 0; j < A.cols(); j++){ //custos fora da base
@@ -105,12 +115,15 @@ int main(int argc, char** argv){
 
             cost = c(j) - y*A.col(j);
             cout << "Custo: " << cost << endl; 
-            // if(cost > max_cost){
-            //     max_cost = cost;
-            //     base_enter = j;
-            // }
-            if(cost > EPSILON){ // QUAL O MELHOR CRITÉRIO?
+
+            if((cost > EPSILON) && (xB(j) < ub[j])){
                 base_enter = j;
+                ub_satisfied = true
+                break;
+            }
+            if((cost < EPSILON) && (xB(j) > lb[j])){
+                base_enter = j;
+                ub_satisfied = true
                 break;
             }
         }
@@ -167,11 +180,17 @@ int main(int argc, char** argv){
         // cout << "t: " << t << endl;
         //cout << "Quem sai: " << base_exiter << endl;
 
-        base_val[idx_exiter] = base_enter;
+        if(ub_satisfied){
+            xB = xB + t * d;
+        }
+        if(lb_satisfied){
+            xB = xB - t * d;
+        }
 
-        xB = xB - t * d;
         xB(idx_exiter) = t;
         // xB(idx_exiter) = 0.0;
+
+        base_val[idx_exiter] = base_enter;
 
         // cout << "Novo xB: \n" << xB << endl;
 
