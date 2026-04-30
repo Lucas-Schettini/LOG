@@ -1,14 +1,7 @@
-#include "fact.h"
-
-using Eigen::RowVectorXd;
+#include "aux_functions.h"
 
 #define PINF 99999999999
 #define NINF -99999999999
-
-struct EtaFactor{
-    int col; //numero da coluna substituida
-    VectorXd vec; // qual é a coluna de fato
-};
 
 int main(int argc, char** argv){
 
@@ -51,6 +44,18 @@ int main(int argc, char** argv){
     //    cout << base_val[i] << " ";
     }//cout << endl;
 
+    VectorXd xN = VectorXd::Zero(A.cols());
+    for(int i = 0; i < A.cols(); i++){
+        bool basic = false;
+        for(int k = 0; k < A.rows(); k++){
+            if(base_val[k] == i){ 
+                basic = true; 
+                break; 
+            }
+        }
+        if(!basic) xN(i) = lb(i); // começar no lower bound
+    }
+
     MatrixXd B = A.rightCols(b.size()); 
 
     // cout << A << endl;
@@ -77,27 +82,7 @@ int main(int argc, char** argv){
 
         RowVectorXd y = cB;
         
-        for(int k = eta_list.size() - 1; k >= 0; k--){
-            int p = eta_list[k].col; //nova coluna na identidade
-            VectorXd eta = eta_list[k].vec; // coluna de fato
-
-            // double yp = y(p) / eta(p);
-            double soma = 0.0;
-
-            for(int i = 0; i < A.rows(); i++){
-                if(i == p) continue;
-                soma += y(i)*eta(i);
-            }
-
-            y(p) = (y(p) - soma) / eta(p);
-        }
-
-        VectorXd result(y.size());
-        VectorXd yt = y.transpose();
-        fact.solveT(result, yt);
-        y = result.transpose();
-
-        cout << "y: " << y << endl;
+        solve_y(y, eta_list, fact, A);
 
         double cost = 0;
         int base_enter = -1;
@@ -116,14 +101,14 @@ int main(int argc, char** argv){
             cost = c(j) - y*A.col(j);
             cout << "Custo: " << cost << endl; 
 
-            if((cost > EPSILON) && (xB(j) < ub[j])){
+            if((cost > EPSILON) && (xN(j) < ub[j] - EPSILON)){
                 base_enter = j;
-                ub_satisfied = true
+                ub_satisfied = true;
                 break;
             }
-            if((cost < EPSILON) && (xB(j) > lb[j])){
+            if((cost < -EPSILON) && (xN(j) > lb[j] - EPSILON)){
                 base_enter = j;
-                ub_satisfied = true
+                lb_satisfied = true;
                 break;
             }
         }
@@ -155,26 +140,44 @@ int main(int argc, char** argv){
             d(p) = dp;
         }
 
-
         // cout << "d: \n" << d << endl;
 
-        double t = 99999999;
-        //int base_exiter;
+        double t = PINF;
         int idx_exiter = -1;
+        bool flip = false;
 
         for(int i = 0; i < A.rows();i++){
-            if(d(i) > EPSILON){
-                double ratio = xB(i) / d(i);
-                if(ratio < t){ 
-                    t = ratio; 
-                    idx_exiter = i; 
-                }
+            double ratio = PINF;
+            double di = d(i);
+            if(lb_satisfied) di = -d(i);
+
+            if(di > EPSILON){
+                ratio = (xB(i) - lb(base_val[i])) / di;
+            }
+            if(di < -EPSILON){
+                ratio = (ub(base_val[i]) - xB(i)) / (-di);
+            }
+            if(ratio < t){ 
+                t = ratio; 
+                idx_exiter = i; 
             }
         } 
 
-        if(idx_exiter == -1){
-            cout << "ILIMITADO\n";
-            break;
+        // if(idx_exiter == -1){
+        //     cout << "ILIMITADO\n";
+        //     break;
+        // }
+
+        double t_entry;
+        if(ub_satisfied){
+            t_entry = ub(base_enter) - xN(base_enter);
+        }
+        if(lb_satisfied){
+            t_entry = xN(base_enter) - lb(base_enter);
+        }
+        if(t_entry <= t){
+            t = t_entry;
+            flip = true;
         }
 
         // cout << "t: " << t << endl;
@@ -202,9 +205,9 @@ int main(int argc, char** argv){
 
         eta_list.push_back({idx_exiter, d});
 
-        for(int i = 0; i < A.rows(); i++){
-            B.col(i) = A.col(base_val[i]);
-        }
+        // for(int i = 0; i < A.rows(); i++){
+        //     B.col(i) = A.col(base_val[i]);
+        // }
 
         cB(idx_exiter) = c(base_enter);
         // cout << B << endl;

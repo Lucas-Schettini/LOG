@@ -12,9 +12,9 @@ void FactControl::initial_factorization(MatrixXd& B){
 
     for(int i = 0; i < B.rows(); i++){
         for(int j = 0; j < B.rows(); j++){
-            if(abs(B(i,j)) > EPSILON){
-                Ai.push_back(i);
-                Ax.push_back(B(i,j));
+            if(abs(B(j,i)) > EPSILON){
+                Ai.push_back(j);
+                Ax.push_back(B(j,i));
             }
         }
         Ap[i + 1] = Ai.size();
