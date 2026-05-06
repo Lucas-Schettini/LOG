@@ -1,4 +1,5 @@
 #include "fact.h"
+#include <cmath>
 using Eigen::RowVectorXd;
 
 struct EtaFactor{

@@ -5,14 +5,13 @@
 
 int main(int argc, char** argv){
 
-    //mpsReader data = mpsReader(argv[1]);
+    mpsReader data = mpsReader(argv[1]);
 
-    // MatrixXd A = data.A;
-    // VectorXd b = data.b;
-    // VectorXd c = data.c;
-
-    // VectorXd lb = data.lb;
-    // VectorXd ub = data.ub;
+    MatrixXd A = data.A;
+    VectorXd b = data.b;
+    VectorXd c = data.c;
+    VectorXd lb = data.lb;
+    VectorXd ub = data.ub;
 
     // MatrixXd A(3, 7);
     // VectorXd b(3);
@@ -21,17 +20,17 @@ int main(int argc, char** argv){
     // b << 225,117,420;
     // c << 19,13,12,17,0,0,0;
 
-    MatrixXd A(2, 12);
-    VectorXd b(2);
-    RowVectorXd c(12);
-    A << 3,1,5,6,9,4,3,4,7,6,4,5 , 1,0,9,5,8,1,2,7,8,7,9,1;
-    b << 72,62;
-    c << 2,1,-2,-2,3,2,3,-4,0,-2,-3,3;
+    // MatrixXd A(2, 12);
+    // VectorXd b(2);
+    // RowVectorXd c(12);
+    // A << 3,1,5,6,9,4,3,4,7,6,4,5 , 1,0,9,5,8,1,2,7,8,7,9,1;
+    // b << 72,62;
+    // c << 2,1,-2,-2,3,2,3,-4,0,-2,-3,3;
 
-    VectorXd lb(12), ub(12);
+    // VectorXd lb(12), ub(12);
 
-    lb << -5, NINF, -4, -2, 2, 0, 0, 3, NINF, NINF, NINF, NINF;
-    ub << PINF, 3, -2 ,3, 5, 1, PINF, PINF, 0, 5, PINF, PINF;
+    // lb << -5, NINF, -4, -2, 2, 0, 0, 3, NINF, NINF, NINF, NINF;
+    // ub << PINF, 3, -2 ,3, 5, 1, PINF, PINF, 0, 5, PINF, PINF;
 
     vector<int> base_val(A.rows(), -1);
 
@@ -40,7 +39,7 @@ int main(int argc, char** argv){
     //    cout << base_val[i] << " ";
     }//cout << endl;
 
-    VectorXd xN = VectorXd::Zero(A.cols());
+    VectorXd x = VectorXd::Zero(A.cols());
     for(int i = 0; i < A.cols(); i++){
         bool basic = false;
         for(int k = 0; k < A.rows(); k++){
@@ -49,11 +48,10 @@ int main(int argc, char** argv){
                 break; 
             }
         }
-        if(!basic) xN(i) = lb(i); // começar no lower bound
+        if(!basic) x(i) = lb(i); // começar as não basicas no lower bound
     }
 
-    VectorXd xB_aux = b;
-    MatrixXd An(A.rows(), A.cols() - A.rows());
+    VectorXd An_xN(A.rows());
     for(int i = 0; i < A.cols(); i++){
         bool basic = false;
         for(int k = 0; k < A.rows(); k++){
@@ -62,13 +60,13 @@ int main(int argc, char** argv){
                 break; 
             }
         }
-        if(!basic) An.col(i) = A.col(i);
+        if(!basic) An_xN += A.col(i) * x(i);
     }
     // VectorXd xB = b; //xB* = B^-1(b − A_N · xN)
 
     MatrixXd B = A.rightCols(b.size()); 
 
-    VectorXd xB = B.inverse()*(b - An*xN);
+    VectorXd xB = B.inverse()*(b - An_xN);
 
     // cout << A << endl;
     // cout << b << endl;
@@ -76,6 +74,8 @@ int main(int argc, char** argv){
     // cout << B << endl;
 
     RowVectorXd cB = c.tail(b.size());
+    // RowVectorXd cB(2); cB << 2,1;
+    // cout << cB << endl;
 
     int counter = 0;
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv){
 
     while(true){
         counter++;
-        // if(counter == 4) break;
+        // if(counter == 10) break;
         // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
         bool lb_satisfied = false;
@@ -111,14 +111,14 @@ int main(int argc, char** argv){
             if(basic) continue;
 
             cost = c(j) - y*A.col(j);
-            cout << "Custo: " << cost << endl; 
+            // cout << "Custo: " << cost << endl; 
 
-            if((cost > EPSILON) && (xN(j) < ub[j] - EPSILON)){
+            if((cost > EPSILON) && (x(j) < ub[j] - EPSILON)){
                 base_enter = j;
                 ub_satisfied = true;
                 break;
             }
-            if((cost < -EPSILON) && (xN(j) > lb[j] - EPSILON)){
+            if((cost < -EPSILON) && (x(j) > lb[j] + EPSILON)){
                 base_enter = j;
                 lb_satisfied = true;
                 break;
@@ -138,8 +138,6 @@ int main(int argc, char** argv){
         VectorXd d(A.rows()); // d = a
         VectorXd a = A.col(base_enter);
         solve_d(d, a, eta_list, fact, A);
-
-        // cout << "d: \n" << d << endl;
 
         double t = PINF;
         int idx_exiter = -1;
@@ -162,6 +160,8 @@ int main(int argc, char** argv){
             }
         } 
 
+        // cout << "Best t: " << t << endl;
+
         // if(idx_exiter == -1){
         //     cout << "ILIMITADO\n";
         //     break;
@@ -169,11 +169,14 @@ int main(int argc, char** argv){
 
         double t_entry = PINF; //ver se o t entrante é mais justo
         if(ub_satisfied){
-            t_entry = ub(base_enter) - xN(base_enter);
+            t_entry = ub(base_enter) - x(base_enter);
         }
         if(lb_satisfied){
-            t_entry = xN(base_enter) - lb(base_enter);
+            t_entry = x(base_enter) - lb(base_enter);
         }
+
+        // cout << "Best t da entrada: " << t_entry << endl;
+
         if(t_entry <= t){
             t = t_entry;
             flip = true;
@@ -197,21 +200,28 @@ int main(int argc, char** argv){
         // xB(idx_exiter) = t;
 
         if(flip){ // não atualizar a base
+            // cout << "Bound flip: \n";
             if(ub_satisfied){
-                xN(base_enter) = ub(base_enter);
+                x(base_enter) = ub(base_enter);
+                // cout << "Ub está correto\n";
             }
             if(lb_satisfied){
-                xN(base_enter) = lb(base_enter);
+                x(base_enter) = lb(base_enter);
+                // cout << "Lb está correto\n";
             }
         } else{
 
+            double di = d(idx_exiter);
+            if(di > EPSILON){
+                x(base_val[idx_exiter]) = ub(base_val[idx_exiter]);
+            } else if(di < - EPSILON){
+                x(base_val[idx_exiter]) = lb(base_val[idx_exiter]);
+            }
             if(ub_satisfied){
-                xN(base_val[idx_exiter]) = ub(base_val[idx_exiter]);
-                xB(idx_exiter) = xN(base_enter) + t;
+                xB(idx_exiter) = x(base_enter) + t;
             }
             if(lb_satisfied){
-                xN(base_val[idx_exiter]) = lb(base_val[idx_exiter]);
-                xB(idx_exiter) = xN(base_enter) - t;
+                xB(idx_exiter) = x(base_enter) - t;
             }
 
             base_val[idx_exiter] = base_enter;

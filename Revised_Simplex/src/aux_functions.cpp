@@ -21,7 +21,7 @@ void solve_y(RowVectorXd& y, vector<EtaFactor>& eta_list, FactControl& fact, Mat
         fact.solveT(result, yt);
         y = result.transpose();
 
-        cout << "y: " << y << endl;
+        // cout << "y: " << y << endl;
 }
 
 void solve_d(VectorXd& d, VectorXd& a, vector<EtaFactor>& eta_list, FactControl& fact, MatrixXd& A){
@@ -38,5 +38,7 @@ void solve_d(VectorXd& d, VectorXd& a, vector<EtaFactor>& eta_list, FactControl&
             d(i) = d(i) - eta(i) * dp;
         }
         d(p) = dp;
+        
+        // cout << "d: \n" << d << endl;
     }
 }
