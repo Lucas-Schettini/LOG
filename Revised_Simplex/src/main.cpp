@@ -8,29 +8,19 @@ int main(int argc, char** argv){
     mpsReader data = mpsReader(argv[1]);
 
     MatrixXd A = data.A;
+    // A = A*(-1);
     VectorXd b = data.b;
     VectorXd c = data.c;
+    // c = c*(-1);
     VectorXd lb = data.lb;
     VectorXd ub = data.ub;
 
-    // MatrixXd A(3, 7);
-    // VectorXd b(3);
-    // RowVectorXd c(7);
-    // A << 3,2,1,2,1,0,0 , 1,1,1,1,0,1,0 , 4,3,3,4,0,0,1;
-    // b << 225,117,420;
-    // c << 19,13,12,17,0,0,0;
-
-    // MatrixXd A(2, 12);
-    // VectorXd b(2);
-    // RowVectorXd c(12);
-    // A << 3,1,5,6,9,4,3,4,7,6,4,5 , 1,0,9,5,8,1,2,7,8,7,9,1;
-    // b << 72,62;
-    // c << 2,1,-2,-2,3,2,3,-4,0,-2,-3,3;
-
-    // VectorXd lb(12), ub(12);
-
-    // lb << -5, NINF, -4, -2, 2, 0, 0, 3, NINF, NINF, NINF, NINF;
-    // ub << PINF, 3, -2 ,3, 5, 1, PINF, PINF, 0, 5, PINF, PINF;
+    for(int i = 0; i < lb.size(); i++){
+        cout << lb(i) << " ";
+    } cout << endl;
+    for(int i = 0; i < ub.size(); i++){
+        cout << ub(i) << " ";
+    } cout << endl;
 
     vector<int> base_val(A.rows(), -1);
 
@@ -62,16 +52,10 @@ int main(int argc, char** argv){
         }
         if(!basic) An_xN += A.col(i) * x(i);
     }
-    // VectorXd xB = b; //xB* = B^-1(b − A_N · xN)
 
     MatrixXd B = A.rightCols(b.size()); 
 
-    VectorXd xB = B.inverse()*(b - An_xN);
-
-    // cout << A << endl;
-    // cout << b << endl;
-    // cout << c << endl;
-    // cout << B << endl;
+    VectorXd xB = B.inverse()*(b - An_xN); //xB* = B^-1(b − A_N · xN)
 
     RowVectorXd cB = c.tail(b.size());
     // RowVectorXd cB(2); cB << 2,1;
@@ -111,7 +95,7 @@ int main(int argc, char** argv){
             if(basic) continue;
 
             cost = c(j) - y*A.col(j);
-            // cout << "Custo: " << cost << endl; 
+            // cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
 
             if((cost > EPSILON) && (x(j) < ub[j] - EPSILON)){
                 base_enter = j;
@@ -128,8 +112,16 @@ int main(int argc, char** argv){
 
         if(base_enter == -1){
             cout << "ÓTIMO\nSolução: \n";
-            cout << xB << endl;
-            cout << "Custo: " << cB*xB << endl;
+            // cout << xB << endl;
+            for(int k = 0; k < A.rows(); k++){
+                x(base_val[k]) = xB(k);
+            }
+            double total_cost = 0;
+            for(int k = 0; k < x.size(); k++){
+                total_cost += c(k) * x(k); 
+            } 
+            total_cost = total_cost*(-1);
+            cout << "Custo: " << total_cost << endl;
             break;
         }
 
@@ -160,7 +152,7 @@ int main(int argc, char** argv){
             }
         } 
 
-        // cout << "Best t: " << t << endl;
+        
 
         // if(idx_exiter == -1){
         //     cout << "ILIMITADO\n";
@@ -174,8 +166,8 @@ int main(int argc, char** argv){
         if(lb_satisfied){
             t_entry = x(base_enter) - lb(base_enter);
         }
-
-        // cout << "Best t da entrada: " << t_entry << endl;
+        cout << "Best t: " << t << endl;
+        cout << "Best t da entrada: " << t_entry << endl;
 
         if(t_entry <= t){
             t = t_entry;
@@ -200,7 +192,7 @@ int main(int argc, char** argv){
         // xB(idx_exiter) = t;
 
         if(flip){ // não atualizar a base
-            // cout << "Bound flip: \n";
+            cout << "Bound flip: \n";
             if(ub_satisfied){
                 x(base_enter) = ub(base_enter);
                 // cout << "Ub está correto\n";
@@ -212,10 +204,12 @@ int main(int argc, char** argv){
         } else{
 
             double di = d(idx_exiter);
+            if(lb_satisfied) di = -d(idx_exiter);
+
             if(di > EPSILON){
-                x(base_val[idx_exiter]) = ub(base_val[idx_exiter]);
-            } else if(di < - EPSILON){
                 x(base_val[idx_exiter]) = lb(base_val[idx_exiter]);
+            } else if(di < - EPSILON){
+                x(base_val[idx_exiter]) = ub(base_val[idx_exiter]);
             }
             if(ub_satisfied){
                 xB(idx_exiter) = x(base_enter) + t;
@@ -237,10 +231,6 @@ int main(int argc, char** argv){
             //     eta_list.clear();
             // }
         }
-
-        // for(int i = 0; i < A.rows(); i++){
-        //     B.col(i) = A.col(base_val[i]);
-        // }
     }
 
     return 0;
