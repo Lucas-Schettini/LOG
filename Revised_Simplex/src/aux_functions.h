@@ -7,3 +7,4 @@ struct EtaFactor{
 };
 
 void solve_y(RowVectorXd& y, vector<EtaFactor>& eta_list, FactControl& fact, MatrixXd& A);
+void solve_d(VectorXd& d, VectorXd& a, vector<EtaFactor>& eta_list, FactControl& fact, MatrixXd& A);

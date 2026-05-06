@@ -33,10 +33,6 @@ int main(int argc, char** argv){
     lb << -5, NINF, -4, -2, 2, 0, 0, 3, NINF, NINF, NINF, NINF;
     ub << PINF, 3, -2 ,3, 5, 1, PINF, PINF, 0, 5, PINF, PINF;
 
-    VectorXd xB = b;
-
-    cout << "Primeiro xB: \n" << b << endl;
-
     vector<int> base_val(A.rows(), -1);
 
     for(int i = 0; i < A.rows(); i++){
@@ -56,7 +52,23 @@ int main(int argc, char** argv){
         if(!basic) xN(i) = lb(i); // começar no lower bound
     }
 
+    VectorXd xB_aux = b;
+    MatrixXd An(A.rows(), A.cols() - A.rows());
+    for(int i = 0; i < A.cols(); i++){
+        bool basic = false;
+        for(int k = 0; k < A.rows(); k++){
+            if(base_val[k] == i){ 
+                basic = true; 
+                break; 
+            }
+        }
+        if(!basic) An.col(i) = A.col(i);
+    }
+    // VectorXd xB = b; //xB* = B^-1(b − A_N · xN)
+
     MatrixXd B = A.rightCols(b.size()); 
+
+    VectorXd xB = B.inverse()*(b - An*xN);
 
     // cout << A << endl;
     // cout << b << endl;
@@ -125,20 +137,7 @@ int main(int argc, char** argv){
 
         VectorXd d(A.rows()); // d = a
         VectorXd a = A.col(base_enter);
-        fact.solve(d, a);
-
-        for(auto ef : eta_list){
-            int p = ef.col;
-            VectorXd eta = ef.vec;
-
-            double dp = d(p) / eta(p);
-
-            for(int i = 0; i < A.rows(); i++){
-                if(i == p) continue;
-                d(i) = d(i) - eta(i) * dp;
-            }
-            d(p) = dp;
-        }
+        solve_d(d, a, eta_list, fact, A);
 
         // cout << "d: \n" << d << endl;
 
@@ -168,7 +167,7 @@ int main(int argc, char** argv){
         //     break;
         // }
 
-        double t_entry;
+        double t_entry = PINF; //ver se o t entrante é mais justo
         if(ub_satisfied){
             t_entry = ub(base_enter) - xN(base_enter);
         }
@@ -180,37 +179,58 @@ int main(int argc, char** argv){
             flip = true;
         }
 
+        if(t >= PINF){
+            cout << "ILIMITADO\n";
+            break;
+        }
+
         // cout << "t: " << t << endl;
         //cout << "Quem sai: " << base_exiter << endl;
 
         if(ub_satisfied){
-            xB = xB + t * d;
-        }
-        if(lb_satisfied){
             xB = xB - t * d;
         }
+        if(lb_satisfied){
+            xB = xB + t * d;
+        }
 
-        xB(idx_exiter) = t;
-        // xB(idx_exiter) = 0.0;
+        // xB(idx_exiter) = t;
 
-        base_val[idx_exiter] = base_enter;
+        if(flip){ // não atualizar a base
+            if(ub_satisfied){
+                xN(base_enter) = ub(base_enter);
+            }
+            if(lb_satisfied){
+                xN(base_enter) = lb(base_enter);
+            }
+        } else{
 
-        // cout << "Novo xB: \n" << xB << endl;
+            if(ub_satisfied){
+                xN(base_val[idx_exiter]) = ub(base_val[idx_exiter]);
+                xB(idx_exiter) = xN(base_enter) + t;
+            }
+            if(lb_satisfied){
+                xN(base_val[idx_exiter]) = lb(base_val[idx_exiter]);
+                xB(idx_exiter) = xN(base_enter) - t;
+            }
 
-        // cout << "Novas variaveis na base: ";
+            base_val[idx_exiter] = base_enter;
+            cB(idx_exiter) = c(base_enter);
+            eta_list.push_back({idx_exiter, d});
 
-        // for(int i = 0; i < A.rows(); i++){
-        //     cout << base_val[i] << " ";
-        // }cout << endl;
-
-        eta_list.push_back({idx_exiter, d});
+            // condição para refatoração
+            // if(condition){
+            //     for(int i = 0; i < A.rows(); i++){
+            //         B.col(i) = A.col(base_val[i]);
+            //     }
+            //     fact.initial_factorization(B);
+            //     eta_list.clear();
+            // }
+        }
 
         // for(int i = 0; i < A.rows(); i++){
         //     B.col(i) = A.col(base_val[i]);
         // }
-
-        cB(idx_exiter) = c(base_enter);
-        // cout << B << endl;
     }
 
     return 0;
