@@ -1,5 +1,6 @@
 #include "aux_functions.h"
 #include <algorithm>
+#include <chrono>
 
 #define PINF 99999999999
 #define NINF -99999999999
@@ -7,6 +8,8 @@
 int main(int argc, char** argv){
 
     mpsReader data = mpsReader(argv[1]);
+
+    auto start = chrono::high_resolution_clock::now();
 
     MatrixXd A = data.A;
     // A = A*(-1);
@@ -16,12 +19,12 @@ int main(int argc, char** argv){
     VectorXd lb = data.lb;
     VectorXd ub = data.ub;
 
-    for(int i = 0; i < lb.size(); i++){
-        cout << lb(i) << " ";
-    } cout << endl;
-    for(int i = 0; i < ub.size(); i++){
-        cout << ub(i) << " ";
-    } cout << endl;
+    // for(int i = 0; i < lb.size(); i++){
+    //     cout << lb(i) << " ";
+    // } cout << endl;
+    // for(int i = 0; i < ub.size(); i++){
+    //     cout << ub(i) << " ";
+    // } cout << endl;
 
     vector<int> base_val(A.rows(), -1);
 
@@ -96,24 +99,27 @@ int main(int argc, char** argv){
             if(basic) continue;
 
             cost = c(j) - y*A.col(j);
-            // cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
+            //cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
 
             if((cost < -EPSILON) && (x(j) < ub[j] - EPSILON)){
                 base_enter = j;
-                ub_satisfied = true;
+                lb_satisfied = true;
                 break;
             }
             if((cost > EPSILON) && (x(j) > lb[j] + EPSILON)){
                 base_enter = j;
-                lb_satisfied = true;
+                ub_satisfied = true;
                 break;
             }
         }
         // cout << "Max cost: " << max_cost << " Quem entra na base é x" << base_enter << endl; //codado baseado em iniciar no 0
 
         if(base_enter == -1){
-            cout << "ÓTIMO\nSolução: \n";
-            // cout << xB << endl;
+            cout << "ÓTIMO\n";
+
+            // auto xB_print = xB.transpose();
+            // cout << xB_print << endl;
+
             for(int k = 0; k < A.rows(); k++){
                 x(base_val[k]) = xB(k);
             }
@@ -121,7 +127,7 @@ int main(int argc, char** argv){
             for(int k = 0; k < x.size(); k++){
                 total_cost += c(k) * x(k); 
             } 
-            total_cost = total_cost;
+            // total_cost = cB * xB;
             cout << "Custo: " << total_cost << endl;
             break;
         }
@@ -147,13 +153,24 @@ int main(int argc, char** argv){
             if(di < -EPSILON){
                 ratio = max(0.0, (ub(base_val[i]) - xB(i)) / (-di));
             }
-            if(ratio < t){ 
+            // if(ratio < t){ 
+            //     t = ratio; 
+            //     idx_exiter = i; 
+            // }
+            if((fabs(ratio - t) < EPSILON)){
+                if(base_val[i] < base_val[idx_exiter]){
+                    idx_exiter = i; 
+                    //cout << "Degenerado resolvido\n";
+                }
+            } else if(ratio < t){
                 t = ratio; 
-                idx_exiter = i; 
+                idx_exiter = i;
             }
         } 
 
-        
+        if(t == 0){
+            //cout << "Degenerado\n";
+        }
 
         // if(idx_exiter == -1){
         //     cout << "ILIMITADO\n";
@@ -167,8 +184,8 @@ int main(int argc, char** argv){
         if(lb_satisfied){
             t_entry = x(base_enter) - lb(base_enter);
         }
-        cout << "Best t: " << t << endl;
-        cout << "Best t da entrada: " << t_entry << endl;
+        // cout << "Best t: " << t << endl;
+        // cout << "Best t da entrada: " << t_entry << endl;
 
         if(t_entry <= t){
             t = t_entry;
@@ -233,6 +250,11 @@ int main(int argc, char** argv){
             // }
         }
     }
+
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> duration = end - start;
+
+    cout << "Time: " << duration.count() << endl;
 
     return 0;
 }
