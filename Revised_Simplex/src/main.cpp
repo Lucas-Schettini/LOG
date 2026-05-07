@@ -1,4 +1,5 @@
 #include "aux_functions.h"
+#include <algorithm>
 
 #define PINF 99999999999
 #define NINF -99999999999
@@ -41,7 +42,7 @@ int main(int argc, char** argv){
         if(!basic) x(i) = lb(i); // começar as não basicas no lower bound
     }
 
-    VectorXd An_xN(A.rows());
+    VectorXd An_xN = VectorXd::Zero(A.rows());
     for(int i = 0; i < A.cols(); i++){
         bool basic = false;
         for(int k = 0; k < A.rows(); k++){
@@ -97,12 +98,12 @@ int main(int argc, char** argv){
             cost = c(j) - y*A.col(j);
             // cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
 
-            if((cost > EPSILON) && (x(j) < ub[j] - EPSILON)){
+            if((cost < -EPSILON) && (x(j) < ub[j] - EPSILON)){
                 base_enter = j;
                 ub_satisfied = true;
                 break;
             }
-            if((cost < -EPSILON) && (x(j) > lb[j] + EPSILON)){
+            if((cost > EPSILON) && (x(j) > lb[j] + EPSILON)){
                 base_enter = j;
                 lb_satisfied = true;
                 break;
@@ -120,7 +121,7 @@ int main(int argc, char** argv){
             for(int k = 0; k < x.size(); k++){
                 total_cost += c(k) * x(k); 
             } 
-            total_cost = total_cost*(-1);
+            total_cost = total_cost;
             cout << "Custo: " << total_cost << endl;
             break;
         }
@@ -141,10 +142,10 @@ int main(int argc, char** argv){
             if(lb_satisfied) di = -d(i);
 
             if(di > EPSILON){
-                ratio = (xB(i) - lb(base_val[i])) / di;
+                ratio = max(0.0, (xB(i) - lb(base_val[i])) / di);
             }
             if(di < -EPSILON){
-                ratio = (ub(base_val[i]) - xB(i)) / (-di);
+                ratio = max(0.0, (ub(base_val[i]) - xB(i)) / (-di));
             }
             if(ratio < t){ 
                 t = ratio; 
