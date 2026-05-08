@@ -12,10 +12,8 @@ int main(int argc, char** argv){
     auto start = chrono::high_resolution_clock::now();
 
     MatrixXd A = data.A;
-    // A = A*(-1);
     VectorXd b = data.b;
     VectorXd c = data.c;
-    // c = c*(-1);
     VectorXd lb = data.lb;
     VectorXd ub = data.ub;
 
@@ -103,12 +101,12 @@ int main(int argc, char** argv){
 
             if((cost < -EPSILON) && (x(j) < ub[j] - EPSILON)){
                 base_enter = j;
-                lb_satisfied = true;
+                ub_satisfied = true;
                 break;
             }
             if((cost > EPSILON) && (x(j) > lb[j] + EPSILON)){
                 base_enter = j;
-                ub_satisfied = true;
+                lb_satisfied = true;
                 break;
             }
         }
@@ -157,7 +155,7 @@ int main(int argc, char** argv){
             //     t = ratio; 
             //     idx_exiter = i; 
             // }
-            if((fabs(ratio - t) < EPSILON)){
+            if((fabs(ratio - t) < EPSILON) && (idx_exiter != -1)){
                 if(base_val[i] < base_val[idx_exiter]){
                     idx_exiter = i; 
                     //cout << "Degenerado resolvido\n";
@@ -213,11 +211,9 @@ int main(int argc, char** argv){
             cout << "Bound flip: \n";
             if(ub_satisfied){
                 x(base_enter) = ub(base_enter);
-                // cout << "Ub está correto\n";
             }
             if(lb_satisfied){
                 x(base_enter) = lb(base_enter);
-                // cout << "Lb está correto\n";
             }
         } else{
 
