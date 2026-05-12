@@ -13,6 +13,9 @@ int main(int argc, char** argv){
     VectorXd lb = data.lb;
     VectorXd ub = data.ub;
 
+    int n = A.cols();
+    int m = A.rows();
+
     // for(int i = 0; i < lb.size(); i++){
     //     cout << lb(i) << " ";
     // } cout << endl;
@@ -21,6 +24,17 @@ int main(int argc, char** argv){
     // } cout << endl;
 
     //fase 1
+    VectorXd x = VectorXd::Zero(m + n);
+    for(int j = 0; j < n; j ++){
+        x(j) = lb(j); //originais no lb
+    }
+
+    VectorXd infeasibility = b;
+    for(int i = 0; i < m; i++){
+        infeasibility(i) -= A.col(i) * x(i);
+    }
+
+    pair<double, VectorXd> fase_one = revised_simplex();
 
     //fase 2
     pair<double, VectorXd> solution = revised_simplex(A,b,c,lb,ub);
