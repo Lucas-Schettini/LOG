@@ -1,3 +1,6 @@
+#ifndef AUX_H
+#define AUX_H
+
 #include "fact.h"
 #include <cmath>
 #include <iomanip>
@@ -15,4 +18,5 @@ struct EtaFactor{
 
 void solve_y(RowVectorXd& y, vector<EtaFactor>& eta_list, FactControl& fact, MatrixXd& A);
 void solve_d(VectorXd& d, VectorXd& a, vector<EtaFactor>& eta_list, FactControl& fact, MatrixXd& A);
-pair<double, VectorXd> revised_simplex(MatrixXd& A, VectorXd& b, VectorXd& c, VectorXd& lb, VectorXd& ub);
+
+#endif

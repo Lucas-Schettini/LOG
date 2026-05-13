@@ -1,4 +1,4 @@
-#include "aux_functions.h"
+#include "simplex.h"
 #include <chrono>
 
 int main(int argc, char** argv){
@@ -7,42 +7,14 @@ int main(int argc, char** argv){
 
     auto start = chrono::high_resolution_clock::now();
 
-    MatrixXd A = data.A;
-    VectorXd b = data.b;
-    VectorXd c = data.c;
-    VectorXd lb = data.lb;
-    VectorXd ub = data.ub;
+    Simplex simplex = Simplex(data);
 
-    int n = A.cols();
-    int m = A.rows();
-
-    // for(int i = 0; i < lb.size(); i++){
-    //     cout << lb(i) << " ";
-    // } cout << endl;
-    // for(int i = 0; i < ub.size(); i++){
-    //     cout << ub(i) << " ";
-    // } cout << endl;
-
-    //fase 1
-    VectorXd x = VectorXd::Zero(m + n);
-    for(int j = 0; j < n; j ++){
-        x(j) = lb(j); //originais no lb
-    }
-
-    VectorXd infeasibility = b;
-    for(int i = 0; i < m; i++){
-        infeasibility(i) -= A.col(i) * x(i);
-    }
-
-    pair<double, VectorXd> fase_one = revised_simplex();
-
-    //fase 2
-    pair<double, VectorXd> solution = revised_simplex(A,b,c,lb,ub);
+    pair<double, VectorXd> fase_one = simplex.revised_simplex(true);
 
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
 
-    cout << "Otimo: " << solution.first << endl;
+    cout << "Otimo: " << fase_one.first << endl;
 
     cout << "Time: " << duration.count() << endl;
 
