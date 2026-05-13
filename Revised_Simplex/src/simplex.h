@@ -5,6 +5,17 @@
 
 class Simplex{
 public:
+    pair<double, VectorXd> solution;
+
+    Simplex(mpsReader& data);
+    void revised_simplex();
+    bool one_simplex();
+
+private:
+    void initialize();
+    bool check_feasible();
+    pair <double, VectorXd> simplex_loop();
+
     MatrixXd A;
     VectorXd b;
     VectorXd c;
@@ -19,12 +30,6 @@ public:
 
     bool phase_one; //fase 1 ou fase 2 
 
-    Simplex(mpsReader& data);
-    pair<double, VectorXd> revised_simplex(bool phase);
-
-private:
-    void initialize();
-    bool check_feasible();
 };
 
 #endif

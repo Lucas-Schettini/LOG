@@ -9,12 +9,13 @@ int main(int argc, char** argv){
 
     Simplex simplex = Simplex(data);
 
-    pair<double, VectorXd> fase_one = simplex.revised_simplex(true);
+    simplex.one_simplex();
 
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
 
-    cout << "Otimo: " << fase_one.first << endl;
+    cout << "Otimo: " << simplex.solution.first << endl;
+    cout << "Solução: " << simplex.solution.second << endl;
 
     cout << "Time: " << duration.count() << endl;
 

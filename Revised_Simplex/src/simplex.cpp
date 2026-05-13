@@ -63,10 +63,11 @@ void Simplex :: initialize(){
 
         B = MatrixXd :: Identity(m,m); 
 
-        // FALTA AJEITAR A MATRIZ A BASEADA NAS ARTIFICIAIS
-        // MATRIZ A
-        // AJEITAR ELA
-        // AJEITAR
+        MatrixXd A_art(m, m + n);
+        A_art.leftCols(n) = A;
+        A_art.rightCols(m) = B;
+
+        A = A_art;
 
     }else{
         base_val = vector<int>(m, -1);
@@ -102,7 +103,7 @@ void Simplex :: initialize(){
 
         B = A.rightCols(b.size()); 
 
-        xB = B.inverse()*(b - An_xN); //xB* = B^-1(b − A_N · xN)
+        // xB = B.inverse()*(b - An_xN); //xB* = B^-1(b − A_N · xN)
 
         for(int i = 0; i < xB.size(); i++){
             if(xB(i) < lb(i) || xB(i) > ub(i)){
@@ -129,6 +130,7 @@ bool Simplex :: check_feasible(){
 
     if(!feasible){
         cout << "Problema sem solução :(\n";
+        return feasible;
     }
 
     for(int i = 0; i < m; i ++){
@@ -139,22 +141,33 @@ bool Simplex :: check_feasible(){
     return feasible;
 }
 
-pair<double, VectorXd> Simplex :: revised_simplex(bool phase){
-    pair<double, VectorXd> solution;
+bool Simplex :: one_simplex(){
+    phase_one = true;
+    
+    initialize();
 
-    phase_one = phase;
+    solution = simplex_loop();
 
-    int counter = 0;
+    return check_feasible();
+}
+
+void Simplex :: revised_simplex(){
+
+    phase_one = false;
 
     initialize();
+    solution = simplex_loop();
+}
+
+pair <double,VectorXd> Simplex :: simplex_loop(){
+
+    vector<EtaFactor> eta_list;
 
     FactControl fact;
     fact.initial_factorization(B); //fatorização inicial de B
 
-    vector<EtaFactor> eta_list;
-
     while(true){
-        counter++;
+        // counter++;
         // if(counter == 10) break;
         // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
@@ -334,4 +347,6 @@ pair<double, VectorXd> Simplex :: revised_simplex(bool phase){
             // }
         }
     }
+
+    return {-1, VectorXd(1)};
 }
