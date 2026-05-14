@@ -17,11 +17,17 @@ void Simplex :: initialize(){
 
         x = VectorXd::Zero(m + n);
         for(int j = 0; j < n; j ++){
-            x(j) = lb(j); //originais no lb
+            if(lb(j) > NINF / 2.0){
+                x(j) = lb(j);
+            } else if(ub(j) < PINF / 2.0){
+                x(j) = ub(j);
+            } else{
+                x(j) = 0;
+            }
         }
 
         VectorXd infeasibility = b;
-        for(int i = 0; i < m; i++){
+        for(int i = 0; i < n; i++){
             infeasibility -= A.col(i) * x(i);
         }
 
@@ -58,6 +64,9 @@ void Simplex :: initialize(){
         }
 
         cB = c_one.tail(m);
+        c_origin = c;
+        c = c_one;
+
         lb = lb_art;
         ub = ub_art;
 
@@ -70,56 +79,56 @@ void Simplex :: initialize(){
         A = A_art;
 
     }else{
-        base_val = vector<int>(m, -1);
+        // base_val = vector<int>(m, -1);
 
-        for(int i = 0; i < m; i++){
-            base_val[i] = n - m + i;
-        //    cout << base_val[i] << " ";
-        }//cout << endl;
+        // for(int i = 0; i < m; i++){
+        //     base_val[i] = n - m + i;
+        // //    cout << base_val[i] << " ";
+        // }//cout << endl;
 
-        x = VectorXd::Zero(n);
-        for(int i = 0; i < n; i++){
-            bool basic = false;
-            for(int k = 0; k < m; k++){
-                if(base_val[k] == i){ 
-                    basic = true; 
-                    break; 
-                }
-            }
-            if(!basic) x(i) = lb(i); // começar as não basicas no lower bound
-        }
+        // x = VectorXd::Zero(n);
+        // for(int i = 0; i < n; i++){
+        //     bool basic = false;
+        //     for(int k = 0; k < m; k++){
+        //         if(base_val[k] == i){ 
+        //             basic = true; 
+        //             break; 
+        //         }
+        //     }
+        //     if(!basic) x(i) = lb(i); // começar as não basicas no lower bound
+        // }
 
-        VectorXd An_xN = VectorXd::Zero(m);
-        for(int i = 0; i < n; i++){
-            bool basic = false;
-            for(int k = 0; k < m; k++){
-                if(base_val[k] == i){ 
-                    basic = true; 
-                    break; 
-                }
-            }
-            if(!basic) An_xN += A.col(i) * x(i);
-        }
+        // VectorXd An_xN = VectorXd::Zero(m);
+        // for(int i = 0; i < n; i++){
+        //     bool basic = false;
+        //     for(int k = 0; k < m; k++){
+        //         if(base_val[k] == i){ 
+        //             basic = true; 
+        //             break; 
+        //         }
+        //     }
+        //     if(!basic) An_xN += A.col(i) * x(i);
+        // }
 
-        B = A.rightCols(b.size()); 
+        // B = A.rightCols(b.size()); 
 
         // xB = B.inverse()*(b - An_xN); //xB* = B^-1(b − A_N · xN)
 
-        for(int i = 0; i < xB.size(); i++){
-            if(xB(i) < lb(i) || xB(i) > ub(i)){
-                cout << "Inicio fora das bounds\n";
-            }
-        }
+        // for(int i = 0; i < xB.size(); i++){
+        //     if(xB(i) < lb(i) || xB(i) > ub(i)){
+        //         cout << "Inicio fora das bounds\n";
+        //     }
+        // }
 
-        cB = c.tail(b.size());
+        // cB = c.tail(b.size());
     }
 }
 
 bool Simplex :: check_feasible(){
     bool feasible = true;
 
-    int n = A.cols();
     int m = A.rows();
+    int n = A.cols() - m; // sem as artificiais
 
     for(int i = 0; i < m; i++){
         if(fabs(x(n + i)) > EPSILON){
@@ -131,11 +140,6 @@ bool Simplex :: check_feasible(){
     if(!feasible){
         cout << "Problema sem solução :(\n";
         return feasible;
-    }
-
-    for(int i = 0; i < m; i ++){
-        lb(n + i) = 0;
-        ub(n + i) = 0;
     }
 
     return feasible;
@@ -153,9 +157,46 @@ bool Simplex :: one_simplex(){
 
 void Simplex :: revised_simplex(){
 
+    if(!one_simplex()) return;
+
     phase_one = false;
 
+    int m = b.size();
+    int n = c_origin.size();
+
+    for(int i = 0; i < m; i ++){
+        lb(n + i) = 0;
+        ub(n + i) = 0;
+    }
+
+    c = c_origin;
+
+    for(int i = 0; i < m; i ++){
+        lb(n + i) = 0;
+        ub(n + i) = 0;
+    }
+
+    cB.resize(m);
+    for(int i = 0; i < m; i++){
+        cB(i) = c(base_val[i]);
+    }
+
+    B.resize(m, m);
+    for(int k = 0; k < m; k++){
+        B.col(k) = A.col(base_val[k]);
+    }
+
+    for(int j = 0; j < (int)A.cols(); j++){
+        bool basic = false;
+        for(int k = 0; k < m; k++)
+            if(base_val[k] == j){ basic = true; break; }
+        if(!basic){
+            if(j > n) x(j) = 0.0;
+        }
+    }
+    // COLOCAR ISSO DENTRO DO INITIALIZE NO ELSE
     initialize();
+
     solution = simplex_loop();
 }
 
@@ -191,6 +232,8 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
                 }
             }
             if(basic) continue;
+
+            if(phase_one && (j > A.cols() - A.rows())) continue; //ignorar as artificiais zeradas
 
             cost = c(j) - y*A.col(j);
             //cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 

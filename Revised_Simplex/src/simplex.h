@@ -28,6 +28,8 @@ private:
     MatrixXd B;
     RowVectorXd cB;
 
+    VectorXd c_origin;
+
     bool phase_one; //fase 1 ou fase 2 
 
 };
