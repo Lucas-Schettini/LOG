@@ -17,9 +17,9 @@ void Simplex :: initialize(){
 
         x = VectorXd::Zero(m + n);
         for(int j = 0; j < n; j ++){
-            if(lb(j) > NINF / 2.0){
+            if(lb(j) != (-numeric_limits<double>::infinity())){
                 x(j) = lb(j);
-            } else if(ub(j) < PINF / 2.0){
+            } else if(ub(j) != numeric_limits<double>::infinity()){
                 x(j) = ub(j);
             } else{
                 x(j) = 0;
@@ -77,50 +77,6 @@ void Simplex :: initialize(){
         A_art.rightCols(m) = B;
 
         A = A_art;
-
-    }else{
-        // base_val = vector<int>(m, -1);
-
-        // for(int i = 0; i < m; i++){
-        //     base_val[i] = n - m + i;
-        // //    cout << base_val[i] << " ";
-        // }//cout << endl;
-
-        // x = VectorXd::Zero(n);
-        // for(int i = 0; i < n; i++){
-        //     bool basic = false;
-        //     for(int k = 0; k < m; k++){
-        //         if(base_val[k] == i){ 
-        //             basic = true; 
-        //             break; 
-        //         }
-        //     }
-        //     if(!basic) x(i) = lb(i); // começar as não basicas no lower bound
-        // }
-
-        // VectorXd An_xN = VectorXd::Zero(m);
-        // for(int i = 0; i < n; i++){
-        //     bool basic = false;
-        //     for(int k = 0; k < m; k++){
-        //         if(base_val[k] == i){ 
-        //             basic = true; 
-        //             break; 
-        //         }
-        //     }
-        //     if(!basic) An_xN += A.col(i) * x(i);
-        // }
-
-        // B = A.rightCols(b.size()); 
-
-        // xB = B.inverse()*(b - An_xN); //xB* = B^-1(b − A_N · xN)
-
-        // for(int i = 0; i < xB.size(); i++){
-        //     if(xB(i) < lb(i) || xB(i) > ub(i)){
-        //         cout << "Inicio fora das bounds\n";
-        //     }
-        // }
-
-        // cB = c.tail(b.size());
     }
 }
 
@@ -155,11 +111,89 @@ bool Simplex :: one_simplex(){
     return check_feasible();
 }
 
+void Simplex :: refact(){
+    for(int i = 0; i < A.rows(); i++){
+        B.col(i) = A.col(base_val[i]);
+    }
+    fact.initial_factorization(B);
+    eta_list.clear();
+
+    VectorXd b_aug(A.rows());
+    for(int i = 0; i < A.rows(); i++){
+        b_aug(i) = b(i);  
+    }
+
+    VectorXd An_xN = VectorXd::Zero(A.rows());
+    for(int i = 0; i < A.cols(); i++){
+        bool basic = false;
+        for(int k = 0; k < A.rows(); k++){
+            if(base_val[k] == i){ 
+                basic = true; 
+                break; 
+            }
+        }
+        if(!basic) An_xN += A.col(i) * x(i);
+    }
+
+    VectorXd rhs = b_aug - An_xN;
+    xB.resize(A.rows());
+    fact.solve(xB, rhs);
+}
+
+void Simplex :: remove_artificials(){
+    int m = A.rows();
+    int n = A.cols() - m;
+
+    stack<int> S;
+    for(int i = 0; i < A.rows(); i++){
+        if(base_val[i] >= n){ 
+            S.push(i);  
+        }
+    }
+
+    while(!S.empty()){
+        int k = S.top();
+        S.pop();
+
+        VectorXd e_k = VectorXd :: Zero(m);
+        e_k[k] = 1.0;
+
+        VectorXd r(m);
+        fact.solveT(r, e_k);
+
+        for(int i = 0; i < n; i++){
+            bool basic = false;
+            for(int k = 0; k < m; k++){
+                if(base_val[k] == i){ basic = true; break; }
+            }
+            if(basic) continue;
+
+            double r_a = r.dot(A.col(i));
+            if(fabs(r_a) > EPSILON){
+                base_val[k] = i;
+                cB(k) = c(i);
+                x(i) = x(n + k);
+
+                VectorXd a = A.col(i);
+                VectorXd d(m);
+                fact.solve(d, a);          
+
+                eta_list.push_back({k, d});
+
+                break;
+            }
+        }
+    }
+    refact();
+}
+
 void Simplex :: revised_simplex(){
 
     if(!one_simplex()) return;
 
     phase_one = false;
+
+    remove_artificials();
 
     int m = b.size();
     int n = c_origin.size();
@@ -169,12 +203,10 @@ void Simplex :: revised_simplex(){
         ub(n + i) = 0;
     }
 
-    c = c_origin;
-
-    for(int i = 0; i < m; i ++){
-        lb(n + i) = 0;
-        ub(n + i) = 0;
-    }
+    // c = c_origin;
+    VectorXd c_full = VectorXd::Zero(A.cols()); 
+    c_full.head(n) = c_origin;
+    c = c_full;
 
     cB.resize(m);
     for(int i = 0; i < m; i++){
@@ -194,17 +226,27 @@ void Simplex :: revised_simplex(){
             if(j > n) x(j) = 0.0;
         }
     }
-    // COLOCAR ISSO DENTRO DO INITIALIZE NO ELSE
-    initialize();
+    VectorXd An_xN = VectorXd::Zero(A.rows());
+    for(int i = 0; i < A.cols(); i++){
+        bool basic = false;
+        for(int k = 0; k < A.rows(); k++){
+            if(base_val[k] == i){ 
+                basic = true; 
+                break; 
+            }
+        }
+        if(!basic) An_xN += A.col(i) * x(i);
+    }
+    VectorXd rhs = b - An_xN;
+    xB.resize(A.rows());
+    fact.solve(xB, rhs);
+    // initialize();
 
     solution = simplex_loop();
 }
 
 pair <double,VectorXd> Simplex :: simplex_loop(){
 
-    vector<EtaFactor> eta_list;
-
-    FactControl fact;
     fact.initial_factorization(B); //fatorização inicial de B
 
     while(true){
@@ -212,12 +254,18 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
         // if(counter == 10) break;
         // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
 
-        bool lb_satisfied = false;
-        bool ub_satisfied = false;
+        // bool lb_satisfied = false;
+        // bool ub_satisfied = false;
+
+        int enter_dir = 0;
 
         RowVectorXd y = cB;
         
         solve_y(y, eta_list, fact, A);
+
+        for(int k = 0; k < A.rows(); k++){
+            x(base_val[k]) = xB(k);
+        }
 
         double cost = 0;
         int base_enter = -1;
@@ -233,19 +281,21 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
             }
             if(basic) continue;
 
-            if(phase_one && (j > A.cols() - A.rows())) continue; //ignorar as artificiais zeradas
+            if(!phase_one && (j > A.cols() - A.rows())) continue; //ignorar as artificiais zeradas
 
             cost = c(j) - y*A.col(j);
             //cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
 
             if((cost < -EPSILON) && (x(j) < ub[j] - EPSILON)){
                 base_enter = j;
-                ub_satisfied = true;
+                //ub_satisfied = true;
+                enter_dir = -1;
                 break;
             }
             if((cost > EPSILON) && (x(j) > lb[j] + EPSILON)){
                 base_enter = j;
-                lb_satisfied = true;
+                //lb_satisfied = true;
+                enter_dir = 1;
                 break;
             }
         }
@@ -286,14 +336,18 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
 
         for(int i = 0; i < A.rows();i++){
             double ratio = PINF;
-            double di = d(i);
-            if(lb_satisfied) di = -d(i);
+            double di = d(i) * (-enter_dir);
+            // if(lb_satisfied) di = -d(i);
 
             if(di > EPSILON){
-                ratio = max(0.0, (xB(i) - lb(base_val[i])) / di);
+                if(lb(base_val[i]) != (-numeric_limits<double>::infinity())){
+                    ratio = max(0.0, (xB(i) - lb(base_val[i])) / di);
+                }
             }
             if(di < -EPSILON){
-                ratio = max(0.0, (ub(base_val[i]) - xB(i)) / (-di));
+                if(ub(base_val[i]) != numeric_limits<double>::infinity()){
+                    ratio = max(0.0, (ub(base_val[i]) - xB(i)) / (-di));
+                }
             }
             // if(ratio < t){ 
             //     t = ratio; 
@@ -310,20 +364,16 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
             }
         } 
 
-        if(t == 0){
-            //cout << "Degenerado\n";
-        }
-
         // if(idx_exiter == -1){
         //     cout << "ILIMITADO\n";
         //     break;
         // }
-
+        
         double t_entry = PINF; //ver se o t entrante é mais justo
-        if(ub_satisfied){
+        if(enter_dir == -1){
             t_entry = ub(base_enter) - x(base_enter);
         }
-        if(lb_satisfied){
+        if(enter_dir == 1){
             t_entry = x(base_enter) - lb(base_enter);
         }
         // cout << "Best t: " << t << endl;
@@ -335,59 +385,64 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
         }
 
         if(t >= PINF){
+            if(idx_exiter == -1){
+                cout << "d: " << d.norm() << endl;
+                cout << "eta_list size: " << eta_list.size() << endl;
+            }
             cout << "ILIMITADO\n";
+            cout << idx_exiter << endl;
             break;
         }
 
         // cout << "t: " << t << endl;
         //cout << "Quem sai: " << base_exiter << endl;
 
-        if(ub_satisfied){
-            xB = xB - t * d;
-        }
-        if(lb_satisfied){
-            xB = xB + t * d;
-        }
+        // if(ub_satisfied){
+        //     xB = xB - t * d;
+        // }
+        // if(lb_satisfied){
+        //     xB = xB + t * d;
+        // }
+
+        xB = xB + t * d * enter_dir;
 
         // xB(idx_exiter) = t;
 
         if(flip){ // não atualizar a base
             cout << "Bound flip: \n";
-            if(ub_satisfied){
+            if(enter_dir == -1){
                 x(base_enter) = ub(base_enter);
             }
-            if(lb_satisfied){
+            if(enter_dir == 1){
                 x(base_enter) = lb(base_enter);
             }
         } else{
 
-            double di = d(idx_exiter);
-            if(lb_satisfied) di = -d(idx_exiter);
+            double di = d(idx_exiter) * (-enter_dir);
+            // if(lb_satisfied) di = -d(idx_exiter);
 
             if(di > EPSILON){
                 x(base_val[idx_exiter]) = lb(base_val[idx_exiter]);
             } else if(di < - EPSILON){
                 x(base_val[idx_exiter]) = ub(base_val[idx_exiter]);
             }
-            if(ub_satisfied){
-                xB(idx_exiter) = x(base_enter) + t;
-            }
-            if(lb_satisfied){
-                xB(idx_exiter) = x(base_enter) - t;
-            }
+            // if(enter_dir == -1){
+            //     xB(idx_exiter) = x(base_enter) + t;
+            // }
+            // if(enter_dir == 1){
+            //     xB(idx_exiter) = x(base_enter) - t;
+            // }
+
+            xB(idx_exiter) = x(base_enter) + t*(-enter_dir);
 
             base_val[idx_exiter] = base_enter;
             cB(idx_exiter) = c(base_enter);
             eta_list.push_back({idx_exiter, d});
 
             // condição para refatoração
-            // if(condition){
-            //     for(int i = 0; i < A.rows(); i++){
-            //         B.col(i) = A.col(base_val[i]);
-            //     }
-            //     fact.initial_factorization(B);
-            //     eta_list.clear();
-            // }
+            if(eta_list.size() == 20){
+                refact();
+            }
         }
     }
 

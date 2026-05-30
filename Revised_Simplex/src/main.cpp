@@ -5,6 +5,11 @@ int main(int argc, char** argv){
 
     mpsReader data = mpsReader(argv[1]);
 
+    // cout << data.lb << endl;
+    // return 0;
+    cout << "Linhas: " << data.A.rows() << endl;
+    cout << "Colunas: " << data.A.rows() << endl;
+
     auto start = chrono::high_resolution_clock::now();
 
     Simplex simplex = Simplex(data);

@@ -4,7 +4,7 @@
 #include "mpsReader.h"
 #include <suitesparse/umfpack.h>
 
-#define EPSILON 1e-9
+#define EPSILON 1e-10
 
 class FactControl{
 public:

@@ -2,6 +2,9 @@
 #define SIMPLEX_H
 
 #include "aux_functions.h"
+#include <limits>
+#include <set>
+#include <stack>
 
 class Simplex{
 public:
@@ -15,6 +18,8 @@ private:
     void initialize();
     bool check_feasible();
     pair <double, VectorXd> simplex_loop();
+    void remove_artificials();
+    void refact();
 
     MatrixXd A;
     VectorXd b;
@@ -29,8 +34,14 @@ private:
     RowVectorXd cB;
 
     VectorXd c_origin;
+    VectorXd lb_origin;
+    VectorXd ub_origin;
+
+    vector<EtaFactor> eta_list;
+    FactControl fact;
 
     bool phase_one; //fase 1 ou fase 2 
+    int flip_count = 0;
 
 };
 
