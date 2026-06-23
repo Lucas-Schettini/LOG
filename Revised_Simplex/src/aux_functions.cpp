@@ -5,6 +5,10 @@ void solve_y(RowVectorXd& y, vector<EtaFactor>& eta_list, FactControl& fact, Mat
         int p = eta_list[k].col; //nova coluna na identidade
         VectorXd eta = eta_list[k].vec; // coluna de fato
 
+        if(fabs(eta(p)) < 1e-10){  
+            cout << "Eta ta lascado\n";
+        }
+
         // double yp = y(p) / eta(p);
         double soma = 0.0;
 
@@ -34,6 +38,10 @@ void solve_d(VectorXd& d, VectorXd& a, vector<EtaFactor>& eta_list, FactControl&
     for(auto ef : eta_list){
         int p = ef.col;
         VectorXd eta = ef.vec;
+
+        if(fabs(eta(p)) < 1e-10){  
+            cout << "Eta ta lascado\n";
+        }
 
         double dp = d(p) / eta(p);
 

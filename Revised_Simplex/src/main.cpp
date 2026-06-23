@@ -12,7 +12,7 @@ int main(int argc, char** argv){
 
     auto start = chrono::high_resolution_clock::now();
 
-    Simplex simplex = Simplex(data);
+    Simplex simplex(data);
 
     simplex.revised_simplex();
 
@@ -26,9 +26,11 @@ int main(int argc, char** argv){
 
     // for(int i = 0; i < m; i++) {
     //     double val_art = simplex.solution.second(n_original + i);
-    //     cout << "Artificial[" << i << "]: " << val_art << endl;
+    //     if(fabs(val_art) > EPSILON || isnan(val_art)){
+    //         cout << "Artificial[" << i << "]: " << val_art << endl;
+    //     }
     // }
-    // cout << "Solução: " << simplex.solution.second << endl;
+    //cout << "Solução: " << simplex.solution.second << endl;
 
     cout << "Time: " << duration.count() << endl;
 

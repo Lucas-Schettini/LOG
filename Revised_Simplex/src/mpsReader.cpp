@@ -1,4 +1,5 @@
 #include "mpsReader.h"
+#include "Scaling.h"
 
 mpsReader::mpsReader(string fileName)
 {
@@ -222,8 +223,10 @@ void mpsReader::_extractData(ifstream &readFile)
     // and splict braw to b and beq
     A = MatrixXd::Zero(n_rows_inq + n_rows_eq, n_cols + n_rows_inq);
     b = VectorXd::Zero(n_rows_inq + n_rows_eq);
-    // Scaling sc;
-    // if(preprocess) sc.geometric_iterate(Araw, braw, c, lb, ub);
+    
+    //preprocessamento para instâncias com alta precisão numérica
+    Scaling sc; 
+    sc.geometric_iterate(Araw, braw, c, lb, ub);
     _splitRaw(Araw, braw, c, A, b);
 }
 

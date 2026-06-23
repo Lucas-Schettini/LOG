@@ -155,16 +155,18 @@ void Simplex :: remove_artificials(){
         int k = S.top();
         S.pop();
 
-        VectorXd e_k = VectorXd :: Zero(m);
+        RowVectorXd e_k = RowVectorXd::Zero(m);
         e_k[k] = 1.0;
 
-        VectorXd r(m);
-        fact.solveT(r, e_k);
+        RowVectorXd r_row = e_k;
+        solve_y(r_row, eta_list, fact, A); //não resolver sem os etas
+        VectorXd r = r_row.transpose();
 
+        bool replaced = false;
         for(int i = 0; i < n; i++){
             bool basic = false;
-            for(int k = 0; k < m; k++){
-                if(base_val[k] == i){ basic = true; break; }
+            for(int j = 0; j < m; j++){
+                if(base_val[j] == i){ basic = true; break; }
             }
             if(basic) continue;
 
@@ -176,14 +178,20 @@ void Simplex :: remove_artificials(){
 
                 VectorXd a = A.col(i);
                 VectorXd d(m);
-                fact.solve(d, a);          
+                solve_d(d, a, eta_list, fact, A);
 
                 eta_list.push_back({k, d});
 
+                replaced = true;
                 break;
             }
         }
+
+        if(!replaced){
+            cout << "Redundancia\n";
+        }
     }
+
     refact();
 }
 
@@ -223,7 +231,7 @@ void Simplex :: revised_simplex(){
         for(int k = 0; k < m; k++)
             if(base_val[k] == j){ basic = true; break; }
         if(!basic){
-            if(j > n) x(j) = 0.0;
+            if(j >= n) x(j) = 0.0;
         }
     }
     VectorXd An_xN = VectorXd::Zero(A.rows());
@@ -281,7 +289,7 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
             }
             if(basic) continue;
 
-            if(!phase_one && (j > A.cols() - A.rows())) continue; //ignorar as artificiais zeradas
+            if(!phase_one && (j >= A.cols() - A.rows())) continue; //ignorar as artificiais zeradas
 
             cost = c(j) - y*A.col(j);
             //cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
@@ -340,7 +348,7 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
             // if(lb_satisfied) di = -d(i);
 
             if(di > EPSILON){
-                if(lb(base_val[i]) != (-numeric_limits<double>::infinity())){
+                if(lb(base_val[i]) != (-numeric_limits<double>::infinity())){ // isinf?
                     ratio = max(0.0, (xB(i) - lb(base_val[i])) / di);
                 }
             }
@@ -370,11 +378,17 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
         // }
         
         double t_entry = PINF; //ver se o t entrante é mais justo
-        if(enter_dir == -1){
+        if(enter_dir == -1 && !isinf(ub(base_enter))){
             t_entry = ub(base_enter) - x(base_enter);
         }
-        if(enter_dir == 1){
+        if(enter_dir == 1 && !isinf(lb(base_enter))){
             t_entry = x(base_enter) - lb(base_enter);
+        }
+        if(isinf(t_entry)){
+            cout << "t_enty inf" << endl;
+        }
+        if(isinf(t)){
+            cout << "t inf" << endl;
         }
         // cout << "Best t: " << t << endl;
         // cout << "Best t da entrada: " << t_entry << endl;
@@ -440,7 +454,7 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
             eta_list.push_back({idx_exiter, d});
 
             // condição para refatoração
-            if(eta_list.size() == 20){
+            if(eta_list.size() == 20 || fabs(d(idx_exiter)) < 1e-8){
                 refact();
             }
         }

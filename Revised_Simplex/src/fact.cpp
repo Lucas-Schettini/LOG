@@ -12,7 +12,7 @@ void FactControl::initial_factorization(MatrixXd& B){
 
     for(int i = 0; i < B.rows(); i++){
         for(int j = 0; j < B.rows(); j++){
-            if(abs(B(j,i)) > EPSILON){
+            if(fabs(B(j,i)) > EPSILON){
                 Ai.push_back(j);
                 Ax.push_back(B(j,i));
             }
@@ -25,10 +25,12 @@ void FactControl::initial_factorization(MatrixXd& B){
     if(Numeric) umfpack_di_free_numeric(&Numeric);
 
     // linhas, colunas, ponteiro das colunas (m+1), indice das linhas, valores não nulos, Symbolic
-    umfpack_di_symbolic(B.rows(), B.rows(), Ap.data(), Ai.data(), Ax.data(), &Symbolic, nullptr, nullptr);
+    int status_sym = umfpack_di_symbolic(B.rows(), B.rows(), Ap.data(), Ai.data(), Ax.data(), &Symbolic, nullptr, nullptr);
     // Ap, Ai, Ax, Symbolic, Numeric
-    umfpack_di_numeric(Ap.data(), Ai.data(), Ax.data(), Symbolic, &Numeric, nullptr, nullptr);
+    int status_num = umfpack_di_numeric(Ap.data(), Ai.data(), Ax.data(), Symbolic, &Numeric, nullptr, nullptr);
 
+    if(status_sym != UMFPACK_OK) cout << "UMFPACK symbolic falhou: " << status_sym << endl;
+    if(status_num != UMFPACK_OK) cout << "UMFPACK numeric status: " << status_num << endl;
 }
 
 void FactControl::solve(VectorXd& x, VectorXd& b){ // resolve Ax = b
