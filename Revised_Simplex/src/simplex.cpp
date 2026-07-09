@@ -13,71 +13,73 @@ void Simplex :: initialize(){
     int n = A.cols();
     int m = A.rows();
 
-    if(phase_one){
-
-        x = VectorXd::Zero(m + n);
-        for(int j = 0; j < n; j ++){
-            if(lb(j) != (-numeric_limits<double>::infinity())){
-                x(j) = lb(j);
-            } else if(ub(j) != numeric_limits<double>::infinity()){
-                x(j) = ub(j);
-            } else{
-                x(j) = 0;
-            }
+    x = VectorXd::Zero(m + n);
+    for(int j = 0; j < n; j ++){
+        if(lb(j) != (-numeric_limits<double>::infinity())){
+            x(j) = lb(j);
+        } else if(ub(j) != numeric_limits<double>::infinity()){
+            x(j) = ub(j);
+        } else{
+            x(j) = 0;
         }
-
-        VectorXd infeasibility = b;
-        for(int i = 0; i < n; i++){
-            infeasibility -= A.col(i) * x(i);
-        }
-
-        VectorXd lb_art(m + n);
-        VectorXd ub_art(m + n);
-
-        lb_art.head(n) = lb;
-        ub_art.head(n) = ub;
-
-        for(int i = 0; i < m; i++){
-            x(n + i) = infeasibility(i);
-            if(infeasibility(i) >= 0){
-                lb_art(n + i) = 0;
-                ub_art(n + i) = PINF;
-            } else {
-                lb_art(n + i) = NINF;
-                ub_art(n + i) = 0;
-            }
-        }
-
-        base_val = vector<int>(m, -1);
-
-        for(int i = 0; i < m; i++){
-            base_val[i] = n + i;
-        //    cout << base_val[i] << " ";
-        }//cout << endl;
-
-        xB = infeasibility;
-
-        VectorXd c_one = VectorXd::Zero(m + n); // computar o termo w
-
-        for(int i = 0; i < m; i++){
-            c_one(n + i) = infeasibility(i) >= 0 ? 1 : -1;
-        }
-
-        cB = c_one.tail(m);
-        c_origin = c;
-        c = c_one;
-
-        lb = lb_art;
-        ub = ub_art;
-
-        B = MatrixXd :: Identity(m,m); 
-
-        MatrixXd A_art(m, m + n);
-        A_art.leftCols(n) = A;
-        A_art.rightCols(m) = B;
-
-        A = A_art;
     }
+
+    VectorXd infeasibility = b;
+    for(int i = 0; i < n; i++){
+        infeasibility -= A.col(i) * x(i);
+    }
+
+    VectorXd lb_art(m + n);
+    VectorXd ub_art(m + n);
+
+    lb_art.head(n) = lb;
+    ub_art.head(n) = ub;
+
+    for(int i = 0; i < m; i++){
+        x(n + i) = infeasibility(i);
+        if(infeasibility(i) >= 0){
+            lb_art(n + i) = 0;
+            ub_art(n + i) = PINF;
+        } else {
+            lb_art(n + i) = NINF;
+            ub_art(n + i) = 0;
+        }
+    }
+
+    base_val = vector<int>(m, -1);
+
+    for(int i = 0; i < m; i++){
+        base_val[i] = n + i;
+    //    cout << base_val[i] << " ";
+    }//cout << endl;
+
+    base_pos = vector<int>(m + n, -1);
+    for(int i = 0; i < m; i++){
+        base_pos[base_val[i]] = i;
+    }
+
+    xB = infeasibility;
+
+    VectorXd c_one = VectorXd::Zero(m + n); // computar o termo w
+
+    for(int i = 0; i < m; i++){
+        c_one(n + i) = infeasibility(i) >= 0 ? 1 : -1;
+    }
+
+    cB = c_one.tail(m);
+    c_origin = c;
+    c = c_one;
+
+    lb = lb_art;
+    ub = ub_art;
+
+    B = MatrixXd :: Identity(m,m); 
+
+    MatrixXd A_art(m, m + n);
+    A_art.leftCols(n) = A;
+    A_art.rightCols(m) = B;
+
+    A = A_art;
 }
 
 bool Simplex :: check_feasible(){
@@ -125,14 +127,8 @@ void Simplex :: refact(){
 
     VectorXd An_xN = VectorXd::Zero(A.rows());
     for(int i = 0; i < A.cols(); i++){
-        bool basic = false;
-        for(int k = 0; k < A.rows(); k++){
-            if(base_val[k] == i){ 
-                basic = true; 
-                break; 
-            }
-        }
-        if(!basic) An_xN += A.col(i) * x(i);
+        if(base_pos[i] >= 0) continue;
+        An_xN += A.col(i) * x(i);
     }
 
     VectorXd rhs = b_aug - An_xN;
@@ -164,15 +160,13 @@ void Simplex :: remove_artificials(){
 
         bool replaced = false;
         for(int i = 0; i < n; i++){
-            bool basic = false;
-            for(int j = 0; j < m; j++){
-                if(base_val[j] == i){ basic = true; break; }
-            }
-            if(basic) continue;
+            if(base_pos[i] >= 0) continue;
 
             double r_a = r.dot(A.col(i));
             if(fabs(r_a) > EPSILON){
+                base_pos[base_val[k]] = -1;
                 base_val[k] = i;
+                base_pos[i] = k;
                 cB(k) = c(i);
                 x(i) = x(n + k);
 
@@ -227,23 +221,18 @@ void Simplex :: revised_simplex(){
     }
 
     for(int j = 0; j < (int)A.cols(); j++){
-        bool basic = false;
-        for(int k = 0; k < m; k++)
-            if(base_val[k] == j){ basic = true; break; }
-        if(!basic){
+        // bool basic = false;
+        // for(int k = 0; k < m; k++)
+        //     if(base_val[k] == j){ basic = true; break; }
+        if(base_pos[j] >= 0) continue;
+        // if(!basic){
             if(j >= n) x(j) = 0.0;
-        }
+        // }
     }
     VectorXd An_xN = VectorXd::Zero(A.rows());
     for(int i = 0; i < A.cols(); i++){
-        bool basic = false;
-        for(int k = 0; k < A.rows(); k++){
-            if(base_val[k] == i){ 
-                basic = true; 
-                break; 
-            }
-        }
-        if(!basic) An_xN += A.col(i) * x(i);
+        if(base_pos[i] >= 0) continue;
+        An_xN += A.col(i) * x(i);
     }
     VectorXd rhs = b - An_xN;
     xB.resize(A.rows());
@@ -256,8 +245,24 @@ void Simplex :: revised_simplex(){
 pair <double,VectorXd> Simplex :: simplex_loop(){
 
     fact.initial_factorization(B); //fatorização inicial de B
+    int iter = 0;
+    const int MAX_ITER = 10000000;
 
     while(true){
+        iter++;
+
+        // if(iter % 1000 == 0){
+        //     double obj = cB.dot(xB);
+        //     cout << "[iter " << iter << "] obj=" << obj
+        //          << " xB_norm=" << xB.norm()
+        //          << " phase=" << (phase_one ? 1 : 2) << endl;
+        // }
+
+        // if(iter > MAX_ITER){
+        //     cout << "LIMITE DE ITERAÇÕES (" << MAX_ITER << ")\n";
+        //     break;
+        // }
+
         // counter++;
         // if(counter == 10) break;
         // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
@@ -280,32 +285,37 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
 
         for(int j = 0; j < A.cols(); j++){ //custos fora da base
 
-            bool basic = false;
-            for(int k = 0; k < A.rows(); k++){
-                if(base_val[k] == j){
-                    basic = true;
-                    break;
-                }
-            }
-            if(basic) continue;
+            if(base_pos[j] >= 0) continue;
 
             if(!phase_one && (j >= A.cols() - A.rows())) continue; //ignorar as artificiais zeradas
 
             cost = c(j) - y*A.col(j);
             //cout << "Custo: " << cost << " Lb: " << lb(j) << " Ub: " << ub(j) << endl; 
 
+            bool electable = false;
+            int dir = 0;
+
             if((cost < -EPSILON) && (x(j) < ub[j] - EPSILON)){
-                base_enter = j;
+                //base_enter = j;
                 //ub_satisfied = true;
-                enter_dir = -1;
-                break;
+                dir = -1;
+                // break;
+                electable = true;
             }
             if((cost > EPSILON) && (x(j) > lb[j] + EPSILON)){
-                base_enter = j;
+                //base_enter = j;
                 //lb_satisfied = true;
-                enter_dir = 1;
+                dir = 1;
+                electable = true;
+                // break;
+            }
+
+            if(electable && (base_enter == -1 || j < base_enter)){
+                base_enter = j;
+                enter_dir = dir;
                 break;
             }
+
         }
 
         if(base_enter == -1){
@@ -449,7 +459,9 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
 
             xB(idx_exiter) = x(base_enter) + t*(-enter_dir);
 
+            base_pos[base_val[idx_exiter]] = -1;
             base_val[idx_exiter] = base_enter;
+            base_pos[base_enter] = idx_exiter;
             cB(idx_exiter) = c(base_enter);
             eta_list.push_back({idx_exiter, d});
 

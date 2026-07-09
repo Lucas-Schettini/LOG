@@ -28,6 +28,7 @@ private:
     VectorXd ub;
 
     vector<int> base_val;
+    vector<int> base_pos;
     VectorXd xB;
     VectorXd x;
     MatrixXd B;
