@@ -244,7 +244,8 @@ void Simplex :: revised_simplex(){
 
 pair <double,VectorXd> Simplex :: simplex_loop(){
 
-    fact.initial_factorization(B); //fatorização inicial de B
+    int singular_status = fact.initial_factorization(B); //fatorização inicial de B
+
     int iter = 0;
     const int MAX_ITER = 10000000;
 
@@ -263,12 +264,6 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
         //     break;
         // }
 
-        // counter++;
-        // if(counter == 10) break;
-        // RowVectorXd y = B.transpose().partialPivLu().solve(cB.transpose());
-
-        // bool lb_satisfied = false;
-        // bool ub_satisfied = false;
 
         int enter_dir = 0;
 
@@ -394,9 +389,9 @@ pair <double,VectorXd> Simplex :: simplex_loop(){
         if(enter_dir == 1 && !isinf(lb(base_enter))){
             t_entry = x(base_enter) - lb(base_enter);
         }
-        if(isinf(t_entry)){
-            cout << "t_enty inf" << endl;
-        }
+        // if(isinf(t_entry)){
+        //     cout << "t_enty inf" << endl;
+        // }
         if(isinf(t)){
             cout << "t inf" << endl;
         }

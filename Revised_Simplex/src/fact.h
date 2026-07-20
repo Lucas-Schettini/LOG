@@ -4,7 +4,9 @@
 #include "mpsReader.h"
 #include <suitesparse/umfpack.h>
 
-#define EPSILON 1e-5
+#define EPSILON 1e-9
+#define ZERO_EPS 1e-11
+#define PIVOT_EPS 1e-8
 
 class FactControl{
 public:
@@ -14,7 +16,7 @@ public:
     void* Numeric;
 
     FactControl();
-    void initial_factorization(MatrixXd& B);
+    int initial_factorization(MatrixXd& B);
     void solve(VectorXd& x, VectorXd& b);
     void solveT(VectorXd& x, VectorXd& b);
     ~FactControl();

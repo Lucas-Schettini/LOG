@@ -13,6 +13,7 @@ public:
     Simplex(mpsReader& data);
     void revised_simplex();
     bool one_simplex();
+    int eta_limiar;
 
 private:
     void initialize();

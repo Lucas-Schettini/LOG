@@ -6,8 +6,8 @@
 #include <iomanip>
 #include <algorithm>
 
-#define PINF 99999999999
-#define NINF -99999999999
+#define PINF numeric_limits<double>::infinity()
+#define NINF -numeric_limits<double>::infinity()
 
 using Eigen::RowVectorXd;
 

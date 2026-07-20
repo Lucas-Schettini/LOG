@@ -4,15 +4,17 @@
 int main(int argc, char** argv){
 
     mpsReader data = mpsReader(argv[1]);
+    int limiar = stoi(argv[2]);
 
     // cout << data.lb << endl;
     // return 0;
     cout << "Linhas: " << data.A.rows() << endl;
-    cout << "Colunas: " << data.A.rows() << endl;
+    cout << "Colunas: " << data.A.cols() << endl;
 
     auto start = chrono::high_resolution_clock::now();
 
     Simplex simplex(data);
+    simplex.eta_limiar = limiar;
 
     simplex.revised_simplex();
 

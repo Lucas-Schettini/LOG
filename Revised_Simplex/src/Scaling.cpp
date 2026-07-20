@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-double EPSILON_1 = 1e-5;
+double EPSILON_1 = 1e-9;
 double pInf = numeric_limits<double>::infinity();
 double nInf = -numeric_limits<double>::infinity();
 
